@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/principalFragment">
+
+    <fragment
+        android:id="@+id/principalFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.PrincipalFragment"
+        android:label="FD-PD Player"
+        tools:layout="@layout/fragment_principal">
+
+        <action
+            android:id="@+id/action_principalFragment_to_listaFragment"
+            app:destination="@id/listaFragment" />
+
+        <action
+            android:id="@+id/action_principalFragment_to_cancionFragment"
+            app:destination="@id/cancionFragment" />
+
+        <action
+            android:id="@+id/action_principalFragment_to_favoritosFragment"
+            app:destination="@id/favoritosFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/favoritosFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments.FavoritosFragment"
+        android:label="Favoritos"
+        tools:layout="@layout/fragment_favoritos" />
+
+    <fragment
+        android:id="@+id/listaFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments.ListaFragment"
+        android:label="Lista"
+        tools:layout="@layout/fragment_lista">
+
+        <argument
+            android:name="listaId"
+            app:argType="integer" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/cancionFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments.CancionFragment"
+        android:label="Canción"
+        tools:layout="@layout/fragment_cancion">
+
+        <argument
+            android:name="cancion"
+            app:argType="es.iesagora.fd_pdplayer.models.Cancion" />
+
+        <argument
+            android:name="posicion"
+            app:argType="integer" />
+    </fragment>
+
+</navigation>

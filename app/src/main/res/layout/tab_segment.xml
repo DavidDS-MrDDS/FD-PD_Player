@@ -1,0 +1,17 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tabRoot"
+    android:layout_width="wrap_content"
+    android:layout_height="46dp"
+    android:paddingHorizontal="18dp"
+    android:background="@drawable/bg_segment_unselected">
+
+    <TextView
+        android:id="@+id/tabText"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Tab"
+        android:textSize="15sp"
+        android:maxLines="1"
+        android:textColor="#B7C3FF"/>
+</FrameLayout>
