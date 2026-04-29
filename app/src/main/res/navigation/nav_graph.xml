@@ -22,23 +22,29 @@
         <action
             android:id="@+id/action_principalFragment_to_favoritosFragment"
             app:destination="@id/favoritosFragment" />
+
     </fragment>
 
     <fragment
         android:id="@+id/favoritosFragment"
-        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments.FavoritosFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.listFragment.FavoritosFragment"
         android:label="Favoritos"
         tools:layout="@layout/fragment_favoritos" />
 
     <fragment
         android:id="@+id/listaFragment"
-        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments.ListaFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.listFragment.ListaFragment"
         android:label="Lista"
         tools:layout="@layout/fragment_lista">
 
         <argument
             android:name="listaId"
             app:argType="integer" />
+
+        <action
+            android:id="@+id/action_listaFragment_to_cancionEnListaFragment"
+            app:destination="@id/cancionEnListaFragment" />
+
     </fragment>
 
     <fragment
@@ -54,6 +60,23 @@
         <argument
             android:name="posicion"
             app:argType="integer" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/cancionEnListaFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments.CancionEnListaFragment"
+        android:label="Canción en lista"
+        tools:layout="@layout/fragment_cancion_en_lista">
+
+        <argument
+            android:name="cancion"
+            app:argType="es.iesagora.fd_pdplayer.models.Cancion" />
+
+        <argument
+            android:name="posicion"
+            app:argType="integer" />
+
     </fragment>
 
 </navigation>

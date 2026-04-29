@@ -1,47 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#101322"
     android:orientation="vertical"
-    android:background="#384380">
+    android:padding="12dp"
+    tools:context=".fragments.internalFragments.listFragment.ListaFragment">
 
-    <androidx.cardview.widget.CardView
+    <TextView
+        android:id="@+id/tvNombreListaDetalle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="12dp"
-        android:backgroundTint="#2F3969"
-        android:elevation="6dp">
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Nombre de la lista"
+        android:textColor="@android:color/white"
+        android:textSize="22sp"
+        android:textStyle="bold" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp">
-
-            <TextView
-                android:id="@+id/tvNombreListaDetalle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Nombre de la lista"
-                android:textColor="@android:color/white"
-                android:textStyle="bold"
-                android:textSize="20sp"
-                android:maxLines="1"
-                android:ellipsize="end" />
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
+    <TextView
+        android:id="@+id/tvContadorListaDetalle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="12dp"
+        android:text="Canciones [0]"
+        android:textColor="#9AA3B2"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.08" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewCancionesLista"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:padding="8dp"
+        android:layout_height="match_parent"
         android:clipToPadding="false"
         android:paddingBottom="16dp"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/viewholder_cancion_en_lista" />
 
 </LinearLayout>

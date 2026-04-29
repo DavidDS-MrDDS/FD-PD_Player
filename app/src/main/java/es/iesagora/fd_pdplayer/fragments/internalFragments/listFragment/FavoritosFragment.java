@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments;
+package es.iesagora.fd_pdplayer.fragments.internalFragments.listFragment;
 
 import android.os.Bundle;
 import android.view.View;
