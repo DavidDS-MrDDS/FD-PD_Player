@@ -21,6 +21,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionBinding;
@@ -36,6 +37,13 @@ public class CancionFragment extends Fragment {
 
     private MediaPlayer mediaPlayer;
     private boolean preparada = false;
+
+    private static final int MODO_NORMAL = 0;
+    private static final int MODO_REPETIR_UNA = 1;
+    private static final int MODO_MIXTA = 2;
+
+    private int modoReproduccion = MODO_NORMAL;
+    private final Random random = new Random();
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -73,6 +81,7 @@ public class CancionFragment extends Fragment {
         recogerDatos();
         pintarCancion();
         prepararControles();
+        actualizarBotonModoReproduccion();
         prepararReproductor();
     }
 
@@ -82,6 +91,23 @@ public class CancionFragment extends Fragment {
         cancion = (Cancion) getArguments().getSerializable("cancion");
         listaCanciones = (ArrayList<Cancion>) getArguments().getSerializable("listaCanciones");
         posicion = getArguments().getInt("posicion", 0);
+
+        if (listaCanciones == null) {
+            listaCanciones = new ArrayList<>();
+        }
+
+        if (listaCanciones.isEmpty() && cancion != null) {
+            listaCanciones.add(cancion);
+            posicion = 0;
+        }
+
+        if (posicion < 0 || posicion >= listaCanciones.size()) {
+            posicion = 0;
+        }
+
+        if (cancion == null && !listaCanciones.isEmpty()) {
+            cancion = listaCanciones.get(posicion);
+        }
     }
 
     private void pintarCancion() {
@@ -89,14 +115,28 @@ public class CancionFragment extends Fragment {
 
         binding.tvNombreCancion.setText(cancion.getNombre());
 
-        String sub = cancion.getAlbum() + " • " + cancion.getArtista();
+        String album = safe(cancion.getAlbum());
+        String artista = safe(cancion.getArtista());
+
+        String sub;
+        if (!TextUtils.isEmpty(album) && !TextUtils.isEmpty(artista)) {
+            sub = album + " • " + artista;
+        } else if (!TextUtils.isEmpty(album)) {
+            sub = album;
+        } else {
+            sub = artista;
+        }
+
         binding.tvSubCancion.setText(sub);
 
         Bitmap bmp = obtenerCaratulaDesdeArchivo(cancion.getRutaArchivo());
         if (bmp != null) binding.ivCaratula.setImageBitmap(bmp);
         else binding.ivCaratula.setImageResource(R.drawable.imagenotfound);
 
-        binding.btnPlayPause.setText("▶");
+        binding.btnPlayPause.setIconResource(R.drawable.ic_player_play);
+        binding.seekBarProgreso.setProgress(0);
+        binding.tvTiempoActual.setText("0:00");
+        binding.tvTiempoFinal.setText("--:--");
     }
 
     private void prepararControles() {
@@ -104,6 +144,8 @@ public class CancionFragment extends Fragment {
 
         binding.btnSiguiente.setOnClickListener(v -> irSiguiente());
         binding.btnAnterior.setOnClickListener(v -> irAnterior());
+
+        binding.btnModoReproduccion.setOnClickListener(v -> cambiarModoReproduccion());
 
         binding.seekBarProgreso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {}
@@ -121,6 +163,11 @@ public class CancionFragment extends Fragment {
     private void prepararReproductor() {
         liberar();
 
+        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
+            Toast.makeText(requireContext(), "No se encontró la canción", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         mediaPlayer = new MediaPlayer();
 
         try {
@@ -130,9 +177,11 @@ public class CancionFragment extends Fragment {
                 preparada = true;
                 binding.tvTiempoFinal.setText(formatearTiempo(mp.getDuration()));
                 mp.start();
-                binding.btnPlayPause.setText("||");
+                binding.btnPlayPause.setIconResource(R.drawable.ic_player_pause);
                 handler.post(actualizador);
             });
+
+            mediaPlayer.setOnCompletionListener(mp -> alTerminarCancion());
 
             mediaPlayer.prepareAsync();
 
@@ -146,30 +195,104 @@ public class CancionFragment extends Fragment {
 
         if (mediaPlayer.isPlaying()) {
             mediaPlayer.pause();
-            binding.btnPlayPause.setText("▶");
+            binding.btnPlayPause.setIconResource(R.drawable.ic_player_play);
         } else {
             mediaPlayer.start();
-            binding.btnPlayPause.setText("||");
+            binding.btnPlayPause.setIconResource(R.drawable.ic_player_pause);
             handler.post(actualizador);
         }
     }
 
     private void irSiguiente() {
-        posicion++;
-        if (posicion >= listaCanciones.size()) posicion = 0;
+        if (listaCanciones == null || listaCanciones.isEmpty()) return;
+
+        if (modoReproduccion == MODO_MIXTA) {
+            posicion = obtenerPosicionAleatoria();
+        } else {
+            posicion++;
+            if (posicion >= listaCanciones.size()) posicion = 0;
+        }
+
         cambiarCancion();
     }
 
     private void irAnterior() {
-        posicion--;
-        if (posicion < 0) posicion = listaCanciones.size() - 1;
+        if (listaCanciones == null || listaCanciones.isEmpty()) return;
+
+        if (modoReproduccion == MODO_MIXTA) {
+            posicion = obtenerPosicionAleatoria();
+        } else {
+            posicion--;
+            if (posicion < 0) posicion = listaCanciones.size() - 1;
+        }
+
         cambiarCancion();
     }
 
     private void cambiarCancion() {
+        if (listaCanciones == null || listaCanciones.isEmpty()) return;
+        if (posicion < 0 || posicion >= listaCanciones.size()) posicion = 0;
+
         cancion = listaCanciones.get(posicion);
         pintarCancion();
         prepararReproductor();
+    }
+
+    private void alTerminarCancion() {
+        if (modoReproduccion == MODO_REPETIR_UNA) {
+            if (mediaPlayer != null) {
+                mediaPlayer.seekTo(0);
+                mediaPlayer.start();
+                binding.btnPlayPause.setIconResource(R.drawable.ic_player_pause);
+                handler.post(actualizador);
+            }
+            return;
+        }
+
+        irSiguiente();
+    }
+
+    private void cambiarModoReproduccion() {
+        modoReproduccion++;
+
+        if (modoReproduccion > MODO_MIXTA) {
+            modoReproduccion = MODO_NORMAL;
+        }
+
+        actualizarBotonModoReproduccion();
+    }
+
+    private void actualizarBotonModoReproduccion() {
+        if (binding == null) return;
+
+        if (modoReproduccion == MODO_NORMAL) {
+            binding.btnModoReproduccion.setImageResource(R.drawable.ic_repeat);
+            binding.btnModoReproduccion.setColorFilter(0xFFCCC8C5);
+            binding.btnModoReproduccion.setContentDescription("Reproducción normal");
+        } else if (modoReproduccion == MODO_REPETIR_UNA) {
+            binding.btnModoReproduccion.setImageResource(R.drawable.ic_repeat_one);
+            binding.btnModoReproduccion.setColorFilter(0xFFE3E0F2);
+            binding.btnModoReproduccion.setContentDescription("Repetir canción");
+        } else {
+            binding.btnModoReproduccion.setImageResource(R.drawable.ic_shuffle);
+            binding.btnModoReproduccion.setColorFilter(0xFFC0C4E7);
+            binding.btnModoReproduccion.setContentDescription("Reproducción mixta");
+        }
+    }
+
+    private int obtenerPosicionAleatoria() {
+        if (listaCanciones == null || listaCanciones.isEmpty()) return 0;
+
+        if (listaCanciones.size() == 1) {
+            return 0;
+        }
+
+        int nuevaPosicion;
+        do {
+            nuevaPosicion = random.nextInt(listaCanciones.size());
+        } while (nuevaPosicion == posicion);
+
+        return nuevaPosicion;
     }
 
     private Bitmap obtenerCaratulaDesdeArchivo(String ruta) {
@@ -198,6 +321,10 @@ public class CancionFragment extends Fragment {
             mediaPlayer = null;
         }
         preparada = false;
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 
     @Override

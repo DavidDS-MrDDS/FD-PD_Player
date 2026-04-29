@@ -44,6 +44,8 @@ public class CancionesFragment extends Fragment {
     private List<ListaEntity> listasActuales = new ArrayList<>();
     private List<Cancion> listaCanciones = new ArrayList<>();
 
+    private boolean ordenarMasNuevasPrimero = true;
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentCancionesBinding.inflate(inflater, container, false);
@@ -91,6 +93,17 @@ public class CancionesFragment extends Fragment {
         binding.recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 1));
         binding.recyclerView.setAdapter(adapter);
 
+        binding.btnSort.setOnClickListener(v -> {
+            ordenarMasNuevasPrimero = !ordenarMasNuevasPrimero;
+            cargarCanciones();
+
+            String mensaje = ordenarMasNuevasPrimero
+                    ? "Ordenadas por más nuevas"
+                    : "Ordenadas por más antiguas";
+
+            Toast.makeText(requireContext(), mensaje, Toast.LENGTH_SHORT).show();
+        });
+
         String permiso;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permiso = Manifest.permission.READ_MEDIA_AUDIO;
@@ -111,6 +124,7 @@ public class CancionesFragment extends Fragment {
 
         Bundle bundle = new Bundle();
         bundle.putSerializable("cancion", cancion);
+        bundle.putSerializable("listaCanciones", new ArrayList<>(listaCanciones));
         bundle.putInt("posicion", posicion);
 
         NavHostFragment.findNavController(this)
@@ -177,9 +191,16 @@ public class CancionesFragment extends Fragment {
     }
 
     private void cargarCanciones() {
-        listaCanciones = repository.getCanciones();
+        listaCanciones = repository.getCancionesPorFecha(ordenarMasNuevasPrimero);
         adapter.establecerLista(listaCanciones);
-        binding.tvCount.setText("ALL SONGS (" + (listaCanciones != null ? listaCanciones.size() : 0) + ")");
+
+        binding.tvCount.setText("Canciones disponibles [" + (listaCanciones != null ? listaCanciones.size() : 0) + "]");
+
+        if (ordenarMasNuevasPrimero) {
+            binding.btnSort.setText("Más nuevas");
+        } else {
+            binding.btnSort.setText("Más antiguas");
+        }
     }
 
     @Override

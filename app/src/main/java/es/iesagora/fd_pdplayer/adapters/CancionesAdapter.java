@@ -26,8 +26,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
     public interface Listener {
         void onOpcionesCancion(View anchor, Cancion cancion);
         void onClickCancion(Cancion cancion);
-        // Si quieres click en el item completo, puedes añadir:
-        // void onClickCancion(Cancion cancion);
     }
 
     private List<Cancion> canciones;
@@ -58,7 +56,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
 
         holder.binding.tvNombre.setText(cancion.getNombre());
 
-        // Sustituye artista+album por una sola línea: "Álbum • Artista"
         String album = safe(cancion.getAlbum());
         String artista = safe(cancion.getArtista());
 
@@ -79,7 +76,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
             holder.binding.ivIcono.setImageResource(R.drawable.imagenotfound);
         }
 
-        // Estado "playing" (como el item azul del HTML)
         boolean isPlaying = rutaCancionReproduciendo != null
                 && rutaCancionReproduciendo.equals(cancion.getRutaArchivo());
 
@@ -104,10 +100,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
         notifyDataSetChanged();
     }
 
-    /**
-     * Llama a esto cuando empiece a reproducirse una canción.
-     * Ejemplo: adapter.setCancionReproduciendo(rutaActual);
-     */
     public void setCancionReproduciendo(String rutaArchivo) {
         this.rutaCancionReproduciendo = rutaArchivo;
         notifyDataSetChanged();

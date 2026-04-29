@@ -22,7 +22,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="ALL SONGS (0)"
+            android:text="Canciones disponibles [0]"
             android:textAllCaps="true"
             android:textSize="11sp"
             android:letterSpacing="0.08"

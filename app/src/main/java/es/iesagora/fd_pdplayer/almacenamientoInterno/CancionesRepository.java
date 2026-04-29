@@ -18,10 +18,18 @@ public class CancionesRepository {
     }
 
     public List<Cancion> getCanciones() {
-        return obtenerCancionesDelSistema();
+        return obtenerCancionesDelSistema(MediaStore.Audio.Media.TITLE + " ASC");
     }
 
-    private List<Cancion> obtenerCancionesDelSistema() {
+    public List<Cancion> getCancionesPorFecha(boolean masNuevasPrimero) {
+        String orden = masNuevasPrimero
+                ? MediaStore.Audio.Media.DATE_ADDED + " DESC"
+                : MediaStore.Audio.Media.DATE_ADDED + " ASC";
+
+        return obtenerCancionesDelSistema(orden);
+    }
+
+    private List<Cancion> obtenerCancionesDelSistema(String sortOrder) {
         List<Cancion> canciones = new ArrayList<>();
 
         String[] projection = {
@@ -30,7 +38,8 @@ public class CancionesRepository {
                 MediaStore.Audio.Media.ARTIST,
                 MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.ALBUM_ID,
-                MediaStore.Audio.Media.DATA
+                MediaStore.Audio.Media.DATA,
+                MediaStore.Audio.Media.DATE_ADDED
         };
 
         String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0";
@@ -40,7 +49,7 @@ public class CancionesRepository {
                 projection,
                 selection,
                 null,
-                MediaStore.Audio.Media.TITLE + " ASC"
+                sortOrder
         );
 
         if (cursor != null) {
@@ -48,7 +57,6 @@ public class CancionesRepository {
             int colArtista = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST);
             int colAlbum = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM);
             int colRuta = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
-
 
             while (cursor.moveToNext()) {
                 String titulo = cursor.getString(colTitulo);
@@ -85,7 +93,6 @@ public class CancionesRepository {
                             album,
                             rutaArchivo
                     ));
-
                 }
             }
 

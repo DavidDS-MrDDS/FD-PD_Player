@@ -71,7 +71,7 @@ public class AuthViewModel extends AndroidViewModel {
                     );
 
                     sessionRepository.saveSession(token, user);
-                    favoriteUploadRepository.sincronizarFavoritosDelUsuario();
+                    favoriteUploadRepository.sincronizarFavoritosDelUsuario(token, user.getUsername());
 
                     String message = response.optString("message", "Inicio de sesión correcto.");
                     authState.postValue(AuthState.loginSuccess(user, token, message));

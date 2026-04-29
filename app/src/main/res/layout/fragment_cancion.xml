@@ -4,12 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#111425"
     android:orientation="vertical"
-    android:background="#101322"
-    android:paddingStart="20dp"
-    android:paddingTop="18dp"
-    android:paddingEnd="20dp"
-    android:paddingBottom="14dp"
+    android:paddingStart="28dp"
+    android:paddingTop="22dp"
+    android:paddingEnd="28dp"
+    android:paddingBottom="22dp"
     tools:context=".fragments.internalFragments.itemFragments.CancionFragment">
 
     <LinearLayout
@@ -19,26 +19,33 @@
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="12dp" />
+
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="18dp"
-            app:cardBackgroundColor="#19233E"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="0dp">
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="34dp"
+            android:layout_weight="1"
+            app:cardBackgroundColor="#1F1E2B"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="14dp"
+            app:strokeColor="#22FFFFFF"
+            app:strokeWidth="1dp">
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:padding="18dp">
+                android:layout_height="match_parent"
+                android:padding="10dp">
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    app:cardBackgroundColor="#080A10"
-                    app:cardCornerRadius="10dp"
-                    app:cardElevation="8dp">
+                    app:cardBackgroundColor="#0D0D19"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="0dp">
 
                     <ImageView
                         android:id="@+id/ivCaratula"
@@ -46,8 +53,11 @@
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
                         android:src="@drawable/imagenotfound" />
+
                 </com.google.android.material.card.MaterialCardView>
+
             </FrameLayout>
+
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
@@ -57,32 +67,39 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="Midnight Resonance"
-            android:textColor="@android:color/white"
-            android:textSize="25sp"
+            android:textColor="#E3E0F2"
+            android:textSize="30sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvSubCancion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="Solaris Echo"
-            android:textColor="#B9C0FF"
-            android:textSize="15sp" />
+            android:textColor="#99C8C5CC"
+            android:textSize="17sp"
+            android:textStyle="bold" />
 
         <SeekBar
             android:id="@+id/seekBarProgreso"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="28dp"
             android:max="100"
-            android:progress="0" />
+            android:progress="0"
+            android:progressBackgroundTint="#26FFFFFF"
+            android:progressTint="#E3E0F2"
+            android:splitTrack="false"
+            android:thumbTint="#E3E0F2" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
@@ -90,56 +107,75 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:letterSpacing="0.08"
                 android:text="0:00"
-                android:textColor="#B9C0FF"
-                android:textSize="11sp" />
+                android:textColor="#99C8C5CC"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvTiempoFinal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:letterSpacing="0.08"
                 android:text="--:--"
-                android:textColor="#B9C0FF"
-                android:textSize="11sp" />
+                android:textColor="#99C8C5CC"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="32dp"
             android:gravity="center"
             android:orientation="horizontal">
 
             <ImageButton
                 android:id="@+id/btnAnterior"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginEnd="22dp"
+                android:layout_width="58dp"
+                android:layout_height="58dp"
+                android:layout_marginEnd="28dp"
                 android:background="@android:color/transparent"
                 android:contentDescription="Canción anterior"
+                android:padding="10dp"
                 android:src="@android:drawable/ic_media_previous"
-                app:tint="@android:color/white" />
+                app:tint="#E3E0F2" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPlayPause"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:text="▶"
-                android:textColor="#101322"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                app:backgroundTint="#E6E6E6"
-                app:cornerRadius="36dp" />
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:gravity="center"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp"
+                android:text=""
+                app:backgroundTint="#E3E0F2"
+                app:cornerRadius="34dp"
+                app:elevation="8dp"
+                app:icon="@drawable/ic_player_play"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="34dp"
+                app:iconTint="#111425" />
 
             <ImageButton
                 android:id="@+id/btnSiguiente"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="22dp"
+                android:layout_width="58dp"
+                android:layout_height="58dp"
+                android:layout_marginStart="28dp"
                 android:background="@android:color/transparent"
                 android:contentDescription="Siguiente canción"
+                android:padding="10dp"
                 android:src="@android:drawable/ic_media_next"
-                app:tint="@android:color/white" />
+                app:tint="#E3E0F2" />
+
         </LinearLayout>
 
     </LinearLayout>
@@ -147,18 +183,22 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="18dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
 
         <ImageButton
             android:id="@+id/btnConfigurar"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@android:color/transparent"
             android:contentDescription="Configurar canción"
+            android:padding="11dp"
             android:src="@android:drawable/ic_menu_manage"
-            app:tint="#B9C0FF" />
+            app:tint="#CCC8C5CC"
+            tools:ignore="HardcodedText" />
 
         <View
             android:layout_width="0dp"
@@ -167,12 +207,14 @@
 
         <ImageButton
             android:id="@+id/btnModoReproduccion"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@android:color/transparent"
             android:contentDescription="Modo de reproducción"
-            android:src="@android:drawable/ic_menu_rotate"
-            app:tint="#B9C0FF" />
+            android:padding="11dp"
+            android:src="@drawable/ic_repeat"
+            app:tint="#CCC8C5CC" />
+
     </LinearLayout>
 
 </LinearLayout>
