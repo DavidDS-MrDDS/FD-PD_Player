@@ -2,10 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.INTERNET" /> <!-- Para Android 12 y menores -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Para Android 12 y menores -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" /> <!-- Para Android 13+ -->
+        android:maxSdkVersion="32" />
+
+    <!-- Para poder copiar canciones en Android 9 o inferior -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- Para Android 13+ -->
     <uses-permission
         android:name="android.permission.READ_MEDIA_AUDIO"
         tools:targetApi="33" />
@@ -19,18 +28,23 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FDPDPlayer">
+
         <activity
             android:name=".loginYRegistro.AuthActivity"
             android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
+
     </application>
 
 </manifest>

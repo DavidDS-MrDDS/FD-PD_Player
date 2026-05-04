@@ -76,10 +76,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
             holder.binding.ivIcono.setImageResource(R.drawable.imagenotfound);
         }
 
-        boolean isPlaying = rutaCancionReproduciendo != null
-                && rutaCancionReproduciendo.equals(cancion.getRutaArchivo());
-
-        aplicarEstiloPlaying(holder, isPlaying);
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onClickCancion(cancion);
@@ -103,33 +99,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
     public void setCancionReproduciendo(String rutaArchivo) {
         this.rutaCancionReproduciendo = rutaArchivo;
         notifyDataSetChanged();
-    }
-
-    private void aplicarEstiloPlaying(@NonNull CancionViewHolder holder, boolean playing) {
-        MaterialCardView card = holder.binding.card;
-
-        if (playing) {
-            int primary = 0xFF1337EC;
-
-            card.setStrokeWidth(dpToPx(1));
-            card.setStrokeColor(0x331337EC);
-            card.setCardBackgroundColor(0x141337EC);
-
-            holder.binding.tvNombre.setTextColor(primary);
-            holder.binding.tvSub.setTextColor(0x991337EC);
-        } else {
-            card.setStrokeWidth(0);
-            card.setStrokeColor(0x00000000);
-            card.setCardBackgroundColor(0x1AFFFFFF);
-
-            holder.binding.tvNombre.setTextColor(0xFFFFFFFF);
-            holder.binding.tvSub.setTextColor(0xFFB9C0FF);
-        }
-    }
-
-    private int dpToPx(int dp) {
-        float density = context.getResources().getDisplayMetrics().density;
-        return Math.round(dp * density);
     }
 
     private String safe(String s) {

@@ -7,11 +7,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.fragment.NavHostFragment;
 
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.usuarioRoom.SessionEntity;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Auth.AuthViewModel;
 import es.iesagora.fd_pdplayer.databinding.FragmentAjustesBinding;
@@ -51,11 +53,13 @@ public class AjustesFragment extends Fragment {
         });
 
         binding.rowOpcion3.setOnClickListener(v -> {
-            // TODO: Acción para opción 3
+            NavHostFragment.findNavController(this)
+                    .navigate(R.id.organizarAlmacenamientoFragment);
         });
 
         binding.rowOpcion4.setOnClickListener(v -> {
-            // TODO: Acción para opción 4
+            NavHostFragment.findNavController(this)
+                    .navigate(R.id.cancionesOcultasFragment);
         });
 
         binding.rowOpcion5.setOnClickListener(v -> {

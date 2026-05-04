@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.fragments.internalFragments.listFragment;
+package es.iesagora.fd_pdplayer.fragments.internalFragments.listFragments;
 
 import android.app.AlertDialog;
 import android.os.Bundle;

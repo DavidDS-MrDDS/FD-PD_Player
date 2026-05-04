@@ -4,6 +4,11 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.View;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -26,6 +31,7 @@ import java.util.List;
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.adapters.CancionesAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.CancionesRepository;
+import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.FavoriteUploadRepository;
@@ -40,11 +46,16 @@ public class CancionesFragment extends Fragment {
 
     private ListasViewModel listasViewModel;
     private FavoriteUploadRepository favoriteUploadRepository;
+    private CancionesOcultasRepository cancionesOcultasRepository;
 
     private List<ListaEntity> listasActuales = new ArrayList<>();
+    private List<Cancion> listaCancionesTodas = new ArrayList<>();
     private List<Cancion> listaCanciones = new ArrayList<>();
 
     private boolean ordenarMasNuevasPrimero = true;
+
+    private final Handler searchHandler = new Handler(Looper.getMainLooper());
+    private Runnable searchRunnable;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -58,6 +69,9 @@ public class CancionesFragment extends Fragment {
 
         listasViewModel = new ViewModelProvider(requireActivity()).get(ListasViewModel.class);
         favoriteUploadRepository = new FavoriteUploadRepository(requireActivity().getApplication());
+
+        repository = new CancionesRepository(requireContext());
+        cancionesOcultasRepository = new CancionesOcultasRepository(requireContext());
 
         listasViewModel.obtenerListas().observe(getViewLifecycleOwner(), listas -> {
             listasActuales = listas != null ? listas : new ArrayList<>();
@@ -75,8 +89,6 @@ public class CancionesFragment extends Fragment {
                     }
                 }
         );
-
-        repository = new CancionesRepository(requireContext());
 
         adapter = new CancionesAdapter(requireContext(), new ArrayList<>(), new CancionesAdapter.Listener() {
             @Override
@@ -104,6 +116,8 @@ public class CancionesFragment extends Fragment {
             Toast.makeText(requireContext(), mensaje, Toast.LENGTH_SHORT).show();
         });
 
+        configurarBuscador();
+
         String permiso;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permiso = Manifest.permission.READ_MEDIA_AUDIO;
@@ -117,6 +131,30 @@ public class CancionesFragment extends Fragment {
         } else {
             permisoAudioLauncher.launch(permiso);
         }
+    }
+
+    private void configurarBuscador() {
+        binding.btnRecargarCanciones.setOnClickListener(v -> cargarCanciones());
+
+        binding.etBuscadorCanciones.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (searchRunnable != null) {
+                    searchHandler.removeCallbacks(searchRunnable);
+                }
+
+                searchRunnable = () -> aplicarFiltroCanciones();
+                searchHandler.postDelayed(searchRunnable, 250);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
     }
 
     private void abrirCancion(Cancion cancion) {
@@ -145,6 +183,11 @@ public class CancionesFragment extends Fragment {
 
             if (itemId == R.id.action_add_to_list) {
                 mostrarDialogSeleccionLista(cancion);
+                return true;
+            }
+
+            if (itemId == R.id.action_hide_song) {
+                confirmarOcultarCancion(cancion);
                 return true;
             }
 
@@ -190,11 +233,28 @@ public class CancionesFragment extends Fragment {
                 .show();
     }
 
-    private void cargarCanciones() {
-        listaCanciones = repository.getCancionesPorFecha(ordenarMasNuevasPrimero);
-        adapter.establecerLista(listaCanciones);
+    private void confirmarOcultarCancion(Cancion cancion) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Ocultar canción")
+                .setMessage("¿Quieres ocultar \"" + cancion.getNombre() + "\"?\n\nNo aparecerá en canciones ni en listas, pero seguirá en favoritos.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Ocultar", (dialog, which) -> ocultarCancion(cancion))
+                .show();
+    }
 
-        binding.tvCount.setText("Canciones disponibles [" + (listaCanciones != null ? listaCanciones.size() : 0) + "]");
+    private void ocultarCancion(Cancion cancion) {
+        cancionesOcultasRepository.ocultarCancion(cancion);
+        listasViewModel.quitarCancionDeTodasLasListas(cancion.getRutaArchivo());
+
+        eliminarPorRuta(listaCancionesTodas, cancion.getRutaArchivo());
+        aplicarFiltroCanciones();
+
+        Toast.makeText(requireContext(), "Canción ocultada", Toast.LENGTH_SHORT).show();
+    }
+
+    private void cargarCanciones() {
+        listaCancionesTodas = repository.getCancionesPorFecha(ordenarMasNuevasPrimero);
+        aplicarFiltroCanciones();
 
         if (ordenarMasNuevasPrimero) {
             binding.btnSort.setText("Más nuevas");
@@ -203,9 +263,82 @@ public class CancionesFragment extends Fragment {
         }
     }
 
+    private void aplicarFiltroCanciones() {
+        String busqueda = binding.etBuscadorCanciones.getText() != null
+                ? binding.etBuscadorCanciones.getText().toString().trim()
+                : "";
+
+        listaCanciones = filtrarCanciones(listaCancionesTodas, busqueda);
+        adapter.establecerLista(listaCanciones);
+
+        binding.tvCount.setText("Canciones disponibles [" + listaCanciones.size() + "]");
+
+        if (listaCanciones.isEmpty()) {
+            binding.recyclerView.setVisibility(View.GONE);
+            binding.tvMensajeCanciones.setVisibility(View.VISIBLE);
+
+            if (TextUtils.isEmpty(busqueda)) {
+                binding.tvMensajeCanciones.setText("No hay canciones disponibles");
+            } else {
+                binding.tvMensajeCanciones.setText("No se encontraron canciones con esa búsqueda");
+            }
+        } else {
+            binding.recyclerView.setVisibility(View.VISIBLE);
+            binding.tvMensajeCanciones.setVisibility(View.GONE);
+        }
+    }
+
+    private List<Cancion> filtrarCanciones(List<Cancion> canciones, String texto) {
+        List<Cancion> resultado = new ArrayList<>();
+
+        if (canciones == null) {
+            return resultado;
+        }
+
+        if (TextUtils.isEmpty(texto)) {
+            resultado.addAll(canciones);
+            return resultado;
+        }
+
+        String filtro = texto.toLowerCase();
+
+        for (Cancion cancion : canciones) {
+            String nombre = safe(cancion.getNombre()).toLowerCase();
+            String artista = safe(cancion.getArtista()).toLowerCase();
+            String album = safe(cancion.getAlbum()).toLowerCase();
+
+            if (nombre.contains(filtro) || artista.contains(filtro) || album.contains(filtro)) {
+                resultado.add(cancion);
+            }
+        }
+
+        return resultado;
+    }
+
+    private void eliminarPorRuta(List<Cancion> canciones, String rutaArchivo) {
+        if (canciones == null || rutaArchivo == null) return;
+
+        for (int i = canciones.size() - 1; i >= 0; i--) {
+            Cancion c = canciones.get(i);
+
+            if (rutaArchivo.equals(c.getRutaArchivo())) {
+                canciones.remove(i);
+            }
+        }
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+
+        if (searchRunnable != null) {
+            searchHandler.removeCallbacks(searchRunnable);
+        }
+
         binding = null;
     }
 }

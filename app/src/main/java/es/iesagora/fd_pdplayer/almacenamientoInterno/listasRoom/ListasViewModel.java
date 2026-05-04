@@ -42,4 +42,12 @@ public class ListasViewModel extends AndroidViewModel {
     public void quitarCancionDeLista(int listaId, String rutaArchivo) {
         repo.quitarCancionDeLista(listaId, rutaArchivo);
     }
+
+    public void quitarCancionDeTodasLasListas(String rutaArchivo) {
+        repo.quitarCancionDeTodasLasListas(rutaArchivo);
+    }
+
+    public void actualizarRutaCancion(String rutaAntigua, String rutaNueva) {
+        repo.actualizarRutaCancion(rutaAntigua, rutaNueva);
+    }
 }

@@ -45,4 +45,12 @@ public class ListasRepository {
     public void quitarCancionDeLista(int listaId, String rutaArchivo) {
         executor.execute(() -> dao.quitarCancionDeLista(listaId, rutaArchivo));
     }
+
+    public void quitarCancionDeTodasLasListas(String rutaArchivo) {
+        executor.execute(() -> dao.quitarCancionDeTodasLasListas(rutaArchivo));
+    }
+
+    public void actualizarRutaCancion(String rutaAntigua, String rutaNueva) {
+        executor.execute(() -> dao.actualizarRutaCancion(rutaAntigua, rutaNueva));
+    }
 }

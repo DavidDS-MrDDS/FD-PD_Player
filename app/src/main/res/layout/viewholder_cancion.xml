@@ -7,15 +7,15 @@
     android:layout_marginHorizontal="8dp"
     android:layout_marginVertical="6dp"
     android:foreground="?attr/selectableItemBackground"
+    app:cardBackgroundColor="#2D3344"
+    app:strokeColor="#3A4154"
+    app:strokeWidth="1dp"
     app:cardCornerRadius="16dp"
-    app:cardElevation="2dp"
-    app:strokeColor="#2637EC00"
-    app:strokeWidth="1dp">
+    app:cardElevation="2dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="84dp"
-        android:background="#1AFFFFFF"
         android:padding="10dp">
 
         <com.google.android.material.imageview.ShapeableImageView

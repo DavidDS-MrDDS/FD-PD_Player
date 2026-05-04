@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+
     <item
         android:id="@+id/action_add_to_favorites"
         android:title="Añadir a favoritos" />
@@ -7,4 +8,9 @@
     <item
         android:id="@+id/action_add_to_list"
         android:title="Añadir a lista" />
+
+    <item
+        android:id="@+id/action_hide_song"
+        android:title="Ocultar canción" />
+
 </menu>

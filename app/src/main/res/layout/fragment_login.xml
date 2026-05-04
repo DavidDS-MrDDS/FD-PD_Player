@@ -222,14 +222,19 @@
         android:layout_height="52dp"
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="36dp"
-        android:paddingStart="36dp"
-        android:paddingEnd="36dp"
-        android:text="←  Volver"
+        android:paddingStart="28dp"
+        android:paddingEnd="34dp"
+        android:text="Volver"
         android:textAllCaps="false"
         android:textColor="#E3E0F2"
         android:textSize="18sp"
         android:textStyle="bold"
         app:backgroundTint="#343341"
-        app:cornerRadius="26dp" />
+        app:cornerRadius="26dp"
+        app:icon="@drawable/ic_arrow"
+        app:iconGravity="textStart"
+        app:iconPadding="10dp"
+        app:iconSize="22dp"
+        app:iconTint="#E3E0F2" />
 
 </FrameLayout>

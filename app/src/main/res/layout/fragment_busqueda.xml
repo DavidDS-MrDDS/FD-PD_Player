@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -45,7 +46,7 @@
                 android:layout_marginStart="16dp"
                 android:contentDescription="Buscar"
                 android:src="@drawable/ic_search"
-                android:tint="#8E9193" />
+                app:tint="#8E9193" />
 
             <EditText
                 android:id="@+id/etBuscadorBusqueda"
@@ -73,7 +74,7 @@
             android:contentDescription="Recargar canciones públicas"
             android:padding="16dp"
             android:src="@drawable/ic_refresh"
-            android:tint="#E3E0F2" />
+            app:tint="#E3E0F2" />
 
     </LinearLayout>
 

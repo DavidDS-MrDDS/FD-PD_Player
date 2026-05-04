@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -10,41 +9,21 @@
     android:paddingTop="16dp"
     android:paddingEnd="24dp"
     android:paddingBottom="12dp"
-    tools:context=".fragments.principalFragments.CancionesFragment">
+    tools:context=".fragments.internalFragments.settingFragments.CancionesOcultasFragment">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/tvCount"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:layout_marginBottom="14dp">
-
-        <TextView
-            android:id="@+id/tvCount"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:letterSpacing="0.08"
-            android:text="Canciones disponibles [0]"
-            android:textAllCaps="true"
-            android:textColor="#9AA3B2"
-            android:textSize="11sp" />
-
-        <TextView
-            android:id="@+id/btnSort"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableLeft="@android:drawable/ic_menu_sort_by_size"
-            android:drawablePadding="6dp"
-            android:padding="4dp"
-            android:text="Sort"
-            android:textColor="#1337EC"
-            android:textSize="11sp" />
-
-    </LinearLayout>
+        android:layout_marginBottom="14dp"
+        android:letterSpacing="0.08"
+        android:text="Canciones ocultas [0]"
+        android:textAllCaps="true"
+        android:textColor="#9AA3B2"
+        android:textSize="11sp" />
 
     <LinearLayout
-        android:id="@+id/layoutControlesCanciones"
+        android:id="@+id/layoutControlesOcultas"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="18dp"
@@ -58,23 +37,23 @@
             android:background="@drawable/bg_busqueda_input">
 
             <ImageView
-                android:id="@+id/ivIconoBuscarCanciones"
+                android:id="@+id/ivIconoBuscarOcultas"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_gravity="center_vertical|start"
                 android:layout_marginStart="16dp"
                 android:contentDescription="Buscar"
                 android:src="@drawable/ic_search"
-                app:tint="#8E9193" />
+                android:tint="#8E9193" />
 
             <EditText
-                android:id="@+id/etBuscadorCanciones"
+                android:id="@+id/etBuscadorOcultas"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginStart="48dp"
                 android:layout_marginEnd="12dp"
                 android:background="@android:color/transparent"
-                android:hint="Buscar canción..."
+                android:hint="Buscar canción oculta..."
                 android:imeOptions="actionSearch"
                 android:inputType="text"
                 android:singleLine="true"
@@ -85,15 +64,15 @@
         </FrameLayout>
 
         <ImageButton
-            android:id="@+id/btnRecargarCanciones"
+            android:id="@+id/btnRecargarOcultas"
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:layout_marginStart="12dp"
             android:background="@drawable/bg_busqueda_boton"
-            android:contentDescription="Recargar canciones"
+            android:contentDescription="Limpiar búsqueda"
             android:padding="16dp"
             android:src="@drawable/ic_refresh"
-            app:tint="#E3E0F2" />
+            android:tint="#E3E0F2" />
 
     </LinearLayout>
 
@@ -112,13 +91,13 @@
             tools:listitem="@layout/viewholder_cancion" />
 
         <TextView
-            android:id="@+id/tvMensajeCanciones"
+            android:id="@+id/tvMensajeOcultas"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center"
             android:padding="24dp"
-            android:text="No se encontraron canciones"
+            android:text="No hay canciones ocultas"
             android:textColor="#E3E0F2"
             android:textSize="17sp"
             android:textStyle="bold"

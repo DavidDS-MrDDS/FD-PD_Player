@@ -222,8 +222,8 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:layout_gravity="center"
-                        android:contentDescription="Ecualizador"
-                        android:src="@drawable/ic_equalizer"
+                        android:contentDescription="Organizar almacenamiento"
+                        android:src="@drawable/ic_folder"
                         app:tint="#CBD5E1" />
 
                 </FrameLayout>
@@ -233,7 +233,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:layout_weight="1"
-                    android:text="Opción 3"
+                    android:text="Organizar almacenamiento"
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -278,8 +278,8 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:layout_gravity="center"
-                        android:contentDescription="Apariencia"
-                        android:src="@drawable/ic_palette"
+                        android:contentDescription="Canciones ocultas"
+                        android:src="@drawable/ic_music_note"
                         app:tint="#CBD5E1" />
 
                 </FrameLayout>
@@ -289,7 +289,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:layout_weight="1"
-                    android:text="Opción 4"
+                    android:text="Canciones ocultas"
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />

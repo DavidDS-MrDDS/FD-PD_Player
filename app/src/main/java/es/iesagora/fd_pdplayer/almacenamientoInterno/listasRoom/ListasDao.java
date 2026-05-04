@@ -30,4 +30,10 @@ public interface ListasDao {
 
     @Query("DELETE FROM cancion_en_lista WHERE listaId = :listaId AND rutaArchivo = :ruta")
     void quitarCancionDeLista(int listaId, String ruta);
+
+    @Query("DELETE FROM cancion_en_lista WHERE rutaArchivo = :ruta")
+    void quitarCancionDeTodasLasListas(String ruta);
+
+    @Query("UPDATE cancion_en_lista SET rutaArchivo = :rutaNueva WHERE rutaArchivo = :rutaAntigua")
+    void actualizarRutaCancion(String rutaAntigua, String rutaNueva);
 }

@@ -28,4 +28,7 @@ public interface FavoritosDao {
 
     @Query("DELETE FROM favoritos_local WHERE sincronizado = 1")
     void deleteAllSynced();
+
+    @Query("UPDATE favoritos_local SET rutaArchivo = :rutaNueva WHERE rutaArchivo = :rutaAntigua")
+    void actualizarRutaCancion(String rutaAntigua, String rutaNueva);
 }

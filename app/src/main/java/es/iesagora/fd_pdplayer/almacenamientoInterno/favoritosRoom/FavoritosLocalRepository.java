@@ -59,4 +59,8 @@ public class FavoritosLocalRepository {
             dao.insertAll(items);
         });
     }
+
+    public void actualizarRutaCancion(String rutaAntigua, String rutaNueva) {
+        executor.execute(() -> dao.actualizarRutaCancion(rutaAntigua, rutaNueva));
+    }
 }

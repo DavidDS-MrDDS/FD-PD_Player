@@ -5,16 +5,21 @@ import android.database.Cursor;
 import android.provider.MediaStore;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
 import es.iesagora.fd_pdplayer.models.Cancion;
 
 public class CancionesRepository {
 
     private final Context context;
+    private final CancionesOcultasRepository cancionesOcultasRepository;
 
     public CancionesRepository(Context context) {
         this.context = context;
+        cancionesOcultasRepository = new CancionesOcultasRepository(context);
     }
 
     public List<Cancion> getCanciones() {
@@ -31,6 +36,7 @@ public class CancionesRepository {
 
     private List<Cancion> obtenerCancionesDelSistema(String sortOrder) {
         List<Cancion> canciones = new ArrayList<>();
+        Set<String> rutasOcultas = new HashSet<>(cancionesOcultasRepository.obtenerRutasOcultasSync());
 
         String[] projection = {
                 MediaStore.Audio.Media._ID,
@@ -59,6 +65,12 @@ public class CancionesRepository {
             int colRuta = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
 
             while (cursor.moveToNext()) {
+                String rutaArchivo = cursor.getString(colRuta);
+
+                if (rutaArchivo == null || rutasOcultas.contains(rutaArchivo)) {
+                    continue;
+                }
+
                 String titulo = cursor.getString(colTitulo);
                 if (titulo == null || titulo.trim().isEmpty()) {
                     titulo = "<unknown>";
@@ -74,7 +86,6 @@ public class CancionesRepository {
                     album = "<unknown>";
                 }
 
-                String rutaArchivo = cursor.getString(colRuta);
                 String claveUnica = titulo + "|" + artista + "|" + album;
 
                 boolean encontrada = false;
