@@ -1,12 +1,9 @@
 package es.iesagora.fd_pdplayer.fragments.principalFragments;
 
-import android.app.AlertDialog;
 import android.os.Bundle;
-import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,7 +14,8 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.adapters.ListasAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.ListasAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.databinding.FragmentListasBinding;
@@ -76,30 +74,26 @@ public class ListasFragment extends Fragment {
     }
 
     private void mostrarDialogCrearLista() {
-        EditText input = new EditText(requireContext());
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        input.setHint("Nombre de la lista");
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Crear lista")
-                .setView(input)
-                .setNegativeButton("Cancelar", (d, w) -> d.dismiss())
-                .setPositiveButton("Crear", (d, w) -> {
-                    String nombre = input.getText().toString().trim();
-                    if (!nombre.isEmpty()) {
-                        viewModel.crearLista(nombre);
-                    }
-                })
-                .show();
+        VentanasApp.mostrarInput(
+                requireContext(),
+                "CrearLista",
+                "Crear lista",
+                "Escribe el nombre de la nueva lista.",
+                "Nombre de la lista",
+                "Crear",
+                nombre -> viewModel.crearLista(nombre)
+        );
     }
 
     private void confirmarBorrado(ListaEntity lista) {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Borrar lista")
-                .setMessage("¿Seguro que quieres borrar \"" + lista.getNombre() + "\"?")
-                .setNegativeButton("Cancelar", (d, w) -> d.dismiss())
-                .setPositiveButton("Borrar", (d, w) -> viewModel.borrarLista(lista.getId()))
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "BorrarLista",
+                "Borrar lista",
+                "¿Seguro que quieres borrar \"" + lista.getNombre() + "\"?",
+                "Borrar",
+                () -> viewModel.borrarLista(lista.getId())
+        );
     }
 
     @Override

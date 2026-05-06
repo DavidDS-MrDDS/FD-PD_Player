@@ -1,6 +1,5 @@
 package es.iesagora.fd_pdplayer.fragments.principalFragments;
 
-import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.Context;
 import android.net.Uri;
@@ -22,7 +21,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-import es.iesagora.fd_pdplayer.adapters.FavoritosRemotosAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.FavoritosRemotosAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.usuarioRoom.SessionEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.usuarioRoom.SessionRepository;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.ApiClient;
@@ -182,12 +182,14 @@ public class BusquedaFragment extends Fragment {
     }
 
     private void mostrarDialogoDescarga(FavoriteItem item) {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Descargar canción")
-                .setMessage("¿Quieres descargar \"" + safe(item.getNombre()) + "\"?")
-                .setPositiveButton("Sí", (dialog, which) -> descargarCancion(item))
-                .setNegativeButton("No", null)
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "DescargarCancion",
+                "Descargar canción",
+                "¿Quieres descargar \"" + safe(item.getNombre()) + "\"?",
+                "Descargar",
+                () -> descargarCancion(item)
+        );
     }
 
     private void descargarCancion(FavoriteItem item) {
@@ -219,7 +221,7 @@ public class BusquedaFragment extends Fragment {
 
             downloadManager.enqueue(request);
 
-            Toast.makeText(requireContext(), "Descarga iniciada", Toast.LENGTH_SHORT).show();
+            VentanasApp.mostrarMensaje(binding.getRoot(), "Descarga iniciada");
 
         } catch (Exception e) {
             Toast.makeText(requireContext(), "Error al descargar: " + e.getMessage(), Toast.LENGTH_LONG).show();

@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.adapters;
+package es.iesagora.fd_pdplayer.funcionamiento.adapters;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

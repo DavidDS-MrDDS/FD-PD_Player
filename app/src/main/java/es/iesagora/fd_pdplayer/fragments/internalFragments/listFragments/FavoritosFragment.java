@@ -2,7 +2,6 @@ package es.iesagora.fd_pdplayer.fragments.internalFragments.listFragments;
 
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,7 +12,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import java.util.ArrayList;
 import java.util.List;
 
-import es.iesagora.fd_pdplayer.adapters.FavoritosRemotosAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.FavoritosRemotosAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.favoritosRoom.FavoritoLocalEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.favoritosRoom.FavoritosLocalRepository;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Auth.AuthViewModel;
@@ -50,27 +50,21 @@ public class FavoritosFragment extends Fragment {
         adapter = new FavoritosRemotosAdapter(false, true, new FavoritosRemotosAdapter.Listener() {
             @Override
             public void onClick(FavoriteItem item) {
-                Toast.makeText(requireContext(), item.getNombre(), Toast.LENGTH_SHORT).show();
+                if (binding != null) {
+                    VentanasApp.mostrarMensaje(binding.getRoot(), safe(item.getNombre()));
+                }
             }
 
             @Override
             public void onDelete(FavoriteItem item) {
                 if (!sesionIniciada) {
-                    Toast.makeText(requireContext(), "Inicia sesión para eliminar favoritos", Toast.LENGTH_SHORT).show();
+                    if (binding != null) {
+                        VentanasApp.mostrarMensaje(binding.getRoot(), "Inicia sesión para eliminar favoritos");
+                    }
                     return;
                 }
 
-                favoriteUploadRepository.eliminarFavorito(item.getSongKey(), new FavoriteUploadRepository.SimpleCallback() {
-                    @Override
-                    public void onSuccess(String message) {
-                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
-                    }
-
-                    @Override
-                    public void onError(String message) {
-                        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
-                    }
-                });
+                confirmarEliminarFavorito(item);
             }
         });
 
@@ -148,6 +142,39 @@ public class FavoritosFragment extends Fragment {
 
         binding.tvTitulo.setText("Favoritos (" + items.size() + ")");
         adapter.setItems(items);
+    }
+
+    private void confirmarEliminarFavorito(FavoriteItem item) {
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "BorrarFavorito",
+                "Eliminar favorito",
+                "¿Quieres eliminar \"" + safe(item.getNombre()) + "\" de tus favoritos?\n\nLa canción no se borrará del dispositivo.",
+                "Eliminar",
+                () -> eliminarFavorito(item)
+        );
+    }
+
+    private void eliminarFavorito(FavoriteItem item) {
+        favoriteUploadRepository.eliminarFavorito(item.getSongKey(), new FavoriteUploadRepository.SimpleCallback() {
+            @Override
+            public void onSuccess(String message) {
+                if (binding != null) {
+                    VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                if (binding != null) {
+                    VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                }
+            }
+        });
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 
     @Override

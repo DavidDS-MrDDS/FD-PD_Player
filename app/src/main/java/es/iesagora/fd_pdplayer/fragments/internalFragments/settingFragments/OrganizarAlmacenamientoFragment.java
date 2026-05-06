@@ -1,7 +1,6 @@
 package es.iesagora.fd_pdplayer.fragments.internalFragments.settingFragments;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Application;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
@@ -40,6 +39,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.CancionesRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.favoritosRoom.FavoritosLocalRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasRepository;
 import es.iesagora.fd_pdplayer.databinding.FragmentOrganizarAlmacenamientoBinding;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
 import es.iesagora.fd_pdplayer.models.Cancion;
 
 public class OrganizarAlmacenamientoFragment extends Fragment {
@@ -123,12 +123,14 @@ public class OrganizarAlmacenamientoFragment extends Fragment {
     }
 
     private void mostrarDialogActualizarCarpeta() {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Actualizar carpeta")
-                .setMessage("¿Quieres actualizar la carpeta y añadir las nuevas canciones?")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Actualizar", (dialog, which) -> actualizarCarpeta())
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "ActualizarCarpeta",
+                "Actualizar carpeta",
+                "¿Quieres actualizar la carpeta y añadir las nuevas canciones?",
+                "Actualizar",
+                this::actualizarCarpeta
+        );
     }
 
     private void organizarCanciones() {
@@ -380,15 +382,14 @@ public class OrganizarAlmacenamientoFragment extends Fragment {
 
         setCargando(true, "Esperando permiso...");
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Permiso necesario")
-                .setMessage(
-                        "Para mover las canciones sin dejar copias duplicadas, Android necesita que confirmes el borrado de los archivos originales.\n\n" +
-                                "Después de aceptar, la app terminará de actualizar la carpeta."
-                )
-                .setNegativeButton("Cancelar", (dialog, which) -> cancelarMovimientosPendientes())
-                .setPositiveButton("Continuar", (dialog, which) -> lanzarPermisoBorrado())
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "PermisoBorrarOriginales",
+                "Permiso necesario",
+                "Para mover las canciones sin dejar copias duplicadas, Android necesita que confirmes el borrado de los archivos originales.\n\nDespués de aceptar, la app terminará de actualizar la carpeta.",
+                "Continuar",
+                this::lanzarPermisoBorrado
+        );
     }
 
     private void lanzarPermisoBorrado() {
@@ -811,11 +812,14 @@ public class OrganizarAlmacenamientoFragment extends Fragment {
     private void mostrarDialogo(String titulo, String mensaje) {
         if (!isAdded()) return;
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle(titulo)
-                .setMessage(mensaje)
-                .setPositiveButton("Aceptar", null)
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "MensajeResultado",
+                titulo,
+                mensaje,
+                "Aceptar",
+                null
+        );
     }
 
     private String safe(String value) {

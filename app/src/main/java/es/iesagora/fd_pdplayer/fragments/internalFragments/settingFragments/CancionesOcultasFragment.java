@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.adapters.CancionesAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionOcultaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionesOcultasBinding;

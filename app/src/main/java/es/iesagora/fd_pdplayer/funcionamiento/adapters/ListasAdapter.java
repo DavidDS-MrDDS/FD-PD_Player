@@ -1,10 +1,9 @@
-package es.iesagora.fd_pdplayer.adapters;
+package es.iesagora.fd_pdplayer.funcionamiento.adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.PopupMenu;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -55,16 +54,9 @@ public class ListasAdapter extends RecyclerView.Adapter<ListasAdapter.ListaViewH
         holder.itemView.setOnClickListener(v -> listener.onAbrir(lista));
 
         holder.binding.btnOpcionesLista.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(context, v);
-            popup.inflate(R.menu.menu_lista);
-            popup.setOnMenuItemClickListener(item -> {
-                if (item.getItemId() == R.id.action_delete_list) {
-                    listener.onPedirBorrar(lista);
-                    return true;
-                }
-                return false;
-            });
-            popup.show();
+            if (listener != null) {
+                listener.onPedirBorrar(lista);
+            }
         });
     }
 

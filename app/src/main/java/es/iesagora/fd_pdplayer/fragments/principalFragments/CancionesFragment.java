@@ -1,7 +1,6 @@
 package es.iesagora.fd_pdplayer.fragments.principalFragments;
 
 import android.Manifest;
-import android.app.AlertDialog;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -12,7 +11,6 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
-import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -29,7 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.adapters.CancionesAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.CancionesRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaEntity;
@@ -170,31 +169,28 @@ public class CancionesFragment extends Fragment {
     }
 
     private void mostrarMenuCancion(View anchor, Cancion cancion) {
-        PopupMenu popup = new PopupMenu(requireContext(), anchor);
-        popup.inflate(R.menu.menu_cancion);
+        String[] opciones = {
+                "Añadir a favoritos",
+                "Añadir a lista",
+                "Ocultar canción"
+        };
 
-        popup.setOnMenuItemClickListener(item -> {
-            int itemId = item.getItemId();
-
-            if (itemId == R.id.action_add_to_favorites) {
-                subirAFavoritos(cancion);
-                return true;
-            }
-
-            if (itemId == R.id.action_add_to_list) {
-                mostrarDialogSeleccionLista(cancion);
-                return true;
-            }
-
-            if (itemId == R.id.action_hide_song) {
-                confirmarOcultarCancion(cancion);
-                return true;
-            }
-
-            return false;
-        });
-
-        popup.show();
+        VentanasApp.mostrarMenu(
+                requireContext(),
+                "MenuCancion",
+                "Opciones de canción",
+                cancion.getNombre(),
+                opciones,
+                (posicion, texto) -> {
+                    if (posicion == 0) {
+                        subirAFavoritos(cancion);
+                    } else if (posicion == 1) {
+                        mostrarDialogSeleccionLista(cancion);
+                    } else if (posicion == 2) {
+                        confirmarOcultarCancion(cancion);
+                    }
+                }
+        );
     }
 
     private void subirAFavoritos(Cancion cancion) {
@@ -213,7 +209,7 @@ public class CancionesFragment extends Fragment {
 
     private void mostrarDialogSeleccionLista(Cancion cancion) {
         if (listasActuales == null || listasActuales.isEmpty()) {
-            Toast.makeText(requireContext(), "Primero crea una lista", Toast.LENGTH_SHORT).show();
+            VentanasApp.mostrarMensaje(binding.getRoot(), "Primero crea una lista");
             return;
         }
 
@@ -222,24 +218,29 @@ public class CancionesFragment extends Fragment {
             nombres[i] = listasActuales.get(i).getNombre();
         }
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Añadir a lista")
-                .setItems(nombres, (dialog, which) -> {
-                    ListaEntity listaSeleccionada = listasActuales.get(which);
+        VentanasApp.mostrarMenu(
+                requireContext(),
+                "MenuCancion_Listas",
+                "Añadir a lista",
+                cancion.getNombre(),
+                nombres,
+                (posicion, texto) -> {
+                    ListaEntity listaSeleccionada = listasActuales.get(posicion);
                     listasViewModel.anadirCancionALista(listaSeleccionada.getId(), cancion);
-                    Toast.makeText(requireContext(), "Añadida a " + listaSeleccionada.getNombre(), Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
+                    VentanasApp.mostrarMensaje(binding.getRoot(), "Añadida a " + listaSeleccionada.getNombre());
+                }
+        );
     }
 
     private void confirmarOcultarCancion(Cancion cancion) {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Ocultar canción")
-                .setMessage("¿Quieres ocultar \"" + cancion.getNombre() + "\"?\n\nNo aparecerá en canciones ni en listas, pero seguirá en favoritos.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Ocultar", (dialog, which) -> ocultarCancion(cancion))
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "OcultarCancion",
+                "Ocultar canción",
+                "¿Quieres ocultar \"" + cancion.getNombre() + "\"?\n\nNo aparecerá en canciones ni en listas, pero seguirá en favoritos.",
+                "Ocultar",
+                () -> ocultarCancion(cancion)
+        );
     }
 
     private void ocultarCancion(Cancion cancion) {
@@ -249,7 +250,7 @@ public class CancionesFragment extends Fragment {
         eliminarPorRuta(listaCancionesTodas, cancion.getRutaArchivo());
         aplicarFiltroCanciones();
 
-        Toast.makeText(requireContext(), "Canción ocultada", Toast.LENGTH_SHORT).show();
+        VentanasApp.mostrarMensaje(binding.getRoot(), "Canción ocultada");
     }
 
     private void cargarCanciones() {

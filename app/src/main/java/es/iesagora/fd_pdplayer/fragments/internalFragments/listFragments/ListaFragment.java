@@ -1,6 +1,5 @@
 package es.iesagora.fd_pdplayer.fragments.internalFragments.listFragments;
 
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,7 +15,8 @@ import androidx.navigation.fragment.NavHostFragment;
 import java.util.ArrayList;
 
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.adapters.CancionesEnListaAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesEnListaAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.CancionEnListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaCanciones;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
@@ -110,12 +110,14 @@ public class ListaFragment extends Fragment {
     }
 
     private void confirmarQuitarCancion(Cancion cancion) {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Quitar canción")
-                .setMessage("¿Quitar \"" + cancion.getNombre() + "\" de la lista?")
-                .setNegativeButton("Cancelar", (d, w) -> d.dismiss())
-                .setPositiveButton("Quitar", (d, w) -> viewModel.quitarCancionDeLista(listaId, cancion.getRutaArchivo()))
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "QuitarCancionLista",
+                "Quitar canción",
+                "¿Quitar \"" + cancion.getNombre() + "\" de la lista?",
+                "Quitar",
+                () -> viewModel.quitarCancionDeLista(listaId, cancion.getRutaArchivo())
+        );
     }
 
     @Override

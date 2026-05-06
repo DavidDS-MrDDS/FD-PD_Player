@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.adapters;
+package es.iesagora.fd_pdplayer.funcionamiento.adapters;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -11,8 +11,6 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.List;
