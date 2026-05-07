@@ -1,16 +1,11 @@
 package es.iesagora.fd_pdplayer;
 
 import android.os.Bundle;
+import android.view.View;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
 
 import es.iesagora.fd_pdplayer.databinding.ActivityMainBinding;
 
@@ -18,7 +13,6 @@ public class MainActivity extends AppCompatActivity {
 
     ActivityMainBinding binding;
     private NavController navController;
-    private AppBarConfiguration appBarConfiguration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,14 +21,27 @@ public class MainActivity extends AppCompatActivity {
 
         setSupportActionBar(binding.toolbar);
 
-        navController = ((NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment)).getNavController();
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        }
+
+        navController = ((NavHostFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.nav_host_fragment))
+                .getNavController();
+
+        binding.btnBackToolbar.setImageResource(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+
+        binding.btnBackToolbar.setOnClickListener(v -> navController.navigateUp());
+
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            boolean mostrarFlecha = destination.getId() != R.id.principalFragment;
+
+            binding.btnBackToolbar.setVisibility(mostrarFlecha ? View.VISIBLE : View.INVISIBLE);
+        });
     }
 
     @Override
     public boolean onSupportNavigateUp() {
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
+        return navController.navigateUp() || super.onSupportNavigateUp();
     }
 }

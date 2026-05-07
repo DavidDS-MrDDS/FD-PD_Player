@@ -8,7 +8,7 @@ import androidx.lifecycle.LiveData;
 
 import java.util.List;
 
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class ListasViewModel extends AndroidViewModel {
 
@@ -49,5 +49,19 @@ public class ListasViewModel extends AndroidViewModel {
 
     public void actualizarRutaCancion(String rutaAntigua, String rutaNueva) {
         repo.actualizarRutaCancion(rutaAntigua, rutaNueva);
+    }
+
+    public void actualizarCancion(String rutaAntigua,
+                                  String rutaNueva,
+                                  String nombre,
+                                  String artista,
+                                  String album) {
+        repo.actualizarCancion(
+                rutaAntigua,
+                rutaNueva,
+                nombre,
+                artista,
+                album
+        );
     }
 }

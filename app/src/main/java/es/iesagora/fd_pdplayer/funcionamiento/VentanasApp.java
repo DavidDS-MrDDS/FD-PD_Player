@@ -60,7 +60,6 @@ public class VentanasApp {
         if (context == null || opciones == null) return;
 
         BottomSheetDialog dialog = crearDialog(context);
-
         LinearLayout root = crearRoot(context);
 
         añadirTitulo(root, titulo, mensaje, obtenerColorOrigen(origen));
@@ -95,7 +94,6 @@ public class VentanasApp {
         if (context == null) return;
 
         BottomSheetDialog dialog = crearDialog(context);
-
         LinearLayout root = crearRoot(context);
 
         int colorOrigen = obtenerColorOrigen(origen);
@@ -118,7 +116,7 @@ public class VentanasApp {
                 context,
                 textoConfirmar,
                 colorOrigen == COLOR_ERROR ? COLOR_ERROR : COLOR_BOTON_CLARO,
-                colorOrigen == COLOR_ERROR ? COLOR_FONDO : COLOR_FONDO
+                COLOR_FONDO
         );
 
         LinearLayout.LayoutParams lpCancelar = new LinearLayout.LayoutParams(
@@ -163,7 +161,6 @@ public class VentanasApp {
         if (context == null) return;
 
         BottomSheetDialog dialog = crearDialog(context);
-
         LinearLayout root = crearRoot(context);
 
         int colorOrigen = obtenerColorOrigen(origen);
@@ -250,8 +247,10 @@ public class VentanasApp {
 
     private static BottomSheetDialog crearDialog(Context context) {
         BottomSheetDialog dialog = new BottomSheetDialog(context);
+
         dialog.setOnShowListener(d -> {
             View bottomSheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+
             if (bottomSheet != null) {
                 bottomSheet.setBackgroundColor(Color.TRANSPARENT);
             }
@@ -278,9 +277,26 @@ public class VentanasApp {
                 dp(context, 24),
                 dp(context, 28)
         );
-        root.setBackground(crearFondo(COLOR_CARD, dp(context, 28)));
+
+        root.setBackground(crearFondoPopupInferiorRecto(context));
 
         return root;
+    }
+
+    private static GradientDrawable crearFondoPopupInferiorRecto(Context context) {
+        int radioSuperior = dp(context, 28);
+
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(COLOR_CARD);
+
+        drawable.setCornerRadii(new float[]{
+                radioSuperior, radioSuperior,
+                radioSuperior, radioSuperior,
+                0, 0,
+                0, 0
+        });
+
+        return drawable;
     }
 
     private static void añadirTitulo(LinearLayout root, String titulo, String mensaje, int colorOrigen) {

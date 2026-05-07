@@ -24,18 +24,19 @@ import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
-import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.CancionesRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.FavoriteUploadRepository;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionesBinding;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionesFragment extends Fragment {
 
@@ -51,7 +52,14 @@ public class CancionesFragment extends Fragment {
     private List<Cancion> listaCancionesTodas = new ArrayList<>();
     private List<Cancion> listaCanciones = new ArrayList<>();
 
-    private boolean ordenarMasNuevasPrimero = true;
+    private static final int ORDEN_MAS_NUEVO = 0;
+    private static final int ORDEN_MAS_ANTIGUO = 1;
+    private static final int ORDEN_A_Z = 2;
+    private static final int ORDEN_Z_A = 3;
+
+    private int modoOrden = ORDEN_MAS_NUEVO;
+
+    private static final String NOMBRE_CARPETA_ORGANIZADA = "FD-PD_Player_Canciones";
 
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
@@ -82,9 +90,11 @@ public class CancionesFragment extends Fragment {
                     if (isGranted) {
                         cargarCanciones();
                     } else {
-                        Toast.makeText(requireContext(),
+                        Toast.makeText(
+                                requireContext(),
                                 "Permiso denegado, no se pueden mostrar canciones",
-                                Toast.LENGTH_SHORT).show();
+                                Toast.LENGTH_SHORT
+                        ).show();
                     }
                 }
         );
@@ -104,16 +114,7 @@ public class CancionesFragment extends Fragment {
         binding.recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 1));
         binding.recyclerView.setAdapter(adapter);
 
-        binding.btnSort.setOnClickListener(v -> {
-            ordenarMasNuevasPrimero = !ordenarMasNuevasPrimero;
-            cargarCanciones();
-
-            String mensaje = ordenarMasNuevasPrimero
-                    ? "Ordenadas por más nuevas"
-                    : "Ordenadas por más antiguas";
-
-            Toast.makeText(requireContext(), mensaje, Toast.LENGTH_SHORT).show();
-        });
+        binding.btnSort.setOnClickListener(v -> mostrarMenuOrdenCanciones());
 
         configurarBuscador();
 
@@ -156,6 +157,28 @@ public class CancionesFragment extends Fragment {
         });
     }
 
+    private void mostrarMenuOrdenCanciones() {
+        String[] opciones = {
+                "Ordenar de más nuevo a más viejo",
+                "Ordenar de más viejo a más nuevo",
+                "Ordenar alfabéticamente A -> Z",
+                "Ordenar alfabéticamente Z -> A"
+        };
+
+        VentanasApp.mostrarMenu(
+                requireContext(),
+                "OrdenCanciones",
+                "Ordenar canciones",
+                "Elige cómo quieres ordenar la lista.",
+                opciones,
+                (posicion, texto) -> {
+                    modoOrden = posicion;
+                    cargarCanciones();
+                    VentanasApp.mostrarMensaje(binding.getRoot(), texto);
+                }
+        );
+    }
+
     private void abrirCancion(Cancion cancion) {
         int posicion = listaCanciones.indexOf(cancion);
 
@@ -170,6 +193,7 @@ public class CancionesFragment extends Fragment {
 
     private void mostrarMenuCancion(View anchor, Cancion cancion) {
         String[] opciones = {
+                "Modificar canción",
                 "Añadir a favoritos",
                 "Añadir a lista",
                 "Ocultar canción"
@@ -183,10 +207,12 @@ public class CancionesFragment extends Fragment {
                 opciones,
                 (posicion, texto) -> {
                     if (posicion == 0) {
-                        subirAFavoritos(cancion);
+                        abrirModificarCancion(cancion);
                     } else if (posicion == 1) {
-                        mostrarDialogSeleccionLista(cancion);
+                        subirAFavoritos(cancion);
                     } else if (posicion == 2) {
+                        mostrarDialogSeleccionLista(cancion);
+                    } else if (posicion == 3) {
                         confirmarOcultarCancion(cancion);
                     }
                 }
@@ -197,12 +223,12 @@ public class CancionesFragment extends Fragment {
         favoriteUploadRepository.subirCancionAFavoritos(cancion, new FavoriteUploadRepository.SimpleCallback() {
             @Override
             public void onSuccess(String message) {
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                VentanasApp.mostrarMensaje(binding.getRoot(), message);
             }
 
             @Override
             public void onError(String message) {
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                VentanasApp.mostrarMensaje(binding.getRoot(), message);
             }
         });
     }
@@ -232,6 +258,27 @@ public class CancionesFragment extends Fragment {
         );
     }
 
+    private void abrirModificarCancion(Cancion cancion) {
+        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
+            VentanasApp.mostrarMensaje(binding.getRoot(), "No se encontró la ruta de la canción");
+            return;
+        }
+
+        if (!estaEnCarpetaOrganizada(cancion.getRutaArchivo())) {
+            VentanasApp.mostrarMensaje(
+                    binding.getRoot(),
+                    "Solo se pueden modificar canciones organizadas."
+            );
+            return;
+        }
+
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("cancion", cancion);
+
+        NavHostFragment.findNavController(this)
+                .navigate(R.id.modificarCancionFragment, bundle);
+    }
+
     private void confirmarOcultarCancion(Cancion cancion) {
         VentanasApp.mostrarConfirmacion(
                 requireContext(),
@@ -254,17 +301,54 @@ public class CancionesFragment extends Fragment {
     }
 
     private void cargarCanciones() {
-        listaCancionesTodas = repository.getCancionesPorFecha(ordenarMasNuevasPrimero);
-        aplicarFiltroCanciones();
-
-        if (ordenarMasNuevasPrimero) {
-            binding.btnSort.setText("Más nuevas");
+        if (modoOrden == ORDEN_MAS_NUEVO) {
+            listaCancionesTodas = repository.getCancionesPorFecha(true);
+        } else if (modoOrden == ORDEN_MAS_ANTIGUO) {
+            listaCancionesTodas = repository.getCancionesPorFecha(false);
         } else {
-            binding.btnSort.setText("Más antiguas");
+            listaCancionesTodas = repository.getCancionesPorFecha(true);
+            ordenarAlfabeticamente(modoOrden == ORDEN_A_Z);
+        }
+
+        aplicarFiltroCanciones();
+        actualizarDescripcionOrden();
+    }
+
+    private void ordenarAlfabeticamente(boolean ascendente) {
+        if (listaCancionesTodas == null) return;
+
+        Collections.sort(listaCancionesTodas, (c1, c2) -> {
+            int resultado = safe(c1.getNombre()).compareToIgnoreCase(safe(c2.getNombre()));
+
+            if (resultado == 0) {
+                resultado = safe(c1.getArtista()).compareToIgnoreCase(safe(c2.getArtista()));
+            }
+
+            if (resultado == 0) {
+                resultado = safe(c1.getAlbum()).compareToIgnoreCase(safe(c2.getAlbum()));
+            }
+
+            return ascendente ? resultado : -resultado;
+        });
+    }
+
+    private void actualizarDescripcionOrden() {
+        if (binding == null) return;
+
+        if (modoOrden == ORDEN_MAS_NUEVO) {
+            binding.btnSort.setContentDescription("Orden actual: de más nuevo a más viejo");
+        } else if (modoOrden == ORDEN_MAS_ANTIGUO) {
+            binding.btnSort.setContentDescription("Orden actual: de más viejo a más nuevo");
+        } else if (modoOrden == ORDEN_A_Z) {
+            binding.btnSort.setContentDescription("Orden actual: alfabéticamente A a Z");
+        } else {
+            binding.btnSort.setContentDescription("Orden actual: alfabéticamente Z a A");
         }
     }
 
     private void aplicarFiltroCanciones() {
+        if (binding == null) return;
+
         String busqueda = binding.etBuscadorCanciones.getText() != null
                 ? binding.etBuscadorCanciones.getText().toString().trim()
                 : "";
@@ -326,6 +410,17 @@ public class CancionesFragment extends Fragment {
                 canciones.remove(i);
             }
         }
+    }
+
+    private boolean estaEnCarpetaOrganizada(String rutaArchivo) {
+        if (TextUtils.isEmpty(rutaArchivo)) {
+            return false;
+        }
+
+        String rutaNormalizada = rutaArchivo.replace("\\", "/").toLowerCase();
+        String carpetaNormalizada = "/" + NOMBRE_CARPETA_ORGANIZADA.toLowerCase() + "/";
+
+        return rutaNormalizada.contains(carpetaNormalizada);
     }
 
     private String safe(String value) {

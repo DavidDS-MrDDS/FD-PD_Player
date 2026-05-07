@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.models;
+package es.iesagora.fd_pdplayer.funcionamiento.models;
 
 import java.io.Serializable;
 

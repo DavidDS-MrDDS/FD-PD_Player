@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionesOcultasRepository {
 
@@ -47,6 +47,20 @@ public class CancionesOcultasRepository {
 
     public void desocultarCancion(String rutaArchivo) {
         executor.execute(() -> dao.desocultarCancion(rutaArchivo));
+    }
+
+    public void actualizarCancion(String rutaAntigua,
+                                  String rutaNueva,
+                                  String nombre,
+                                  String artista,
+                                  String album) {
+        executor.execute(() -> dao.actualizarCancion(
+                rutaAntigua,
+                rutaNueva,
+                nombre,
+                artista,
+                album
+        ));
     }
 
     public List<String> obtenerRutasOcultasSync() {

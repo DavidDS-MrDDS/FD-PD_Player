@@ -20,7 +20,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.favoritosRoom.FavoritoLocal
 import es.iesagora.fd_pdplayer.almacenamientoInterno.favoritosRoom.FavoritosLocalRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.usuarioRoom.SessionEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.usuarioRoom.SessionRepository;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;

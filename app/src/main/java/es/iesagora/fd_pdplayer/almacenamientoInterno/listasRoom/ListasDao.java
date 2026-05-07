@@ -36,4 +36,7 @@ public interface ListasDao {
 
     @Query("UPDATE cancion_en_lista SET rutaArchivo = :rutaNueva WHERE rutaArchivo = :rutaAntigua")
     void actualizarRutaCancion(String rutaAntigua, String rutaNueva);
+
+    @Query("UPDATE cancion_en_lista SET rutaArchivo = :rutaNueva, nombre = :nombre, artista = :artista, album = :album WHERE rutaArchivo = :rutaAntigua")
+    void actualizarCancion(String rutaAntigua, String rutaNueva, String nombre, String artista, String album);
 }

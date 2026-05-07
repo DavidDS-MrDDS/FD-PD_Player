@@ -25,7 +25,7 @@ import java.util.Random;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionBinding;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionFragment extends Fragment {
 

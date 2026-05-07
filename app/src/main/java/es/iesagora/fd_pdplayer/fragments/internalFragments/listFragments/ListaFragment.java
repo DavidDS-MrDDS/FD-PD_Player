@@ -21,7 +21,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.CancionEnListaEn
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaCanciones;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.databinding.FragmentListaBinding;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class ListaFragment extends Fragment {
 

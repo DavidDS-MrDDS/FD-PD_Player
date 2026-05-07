@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class ListasRepository {
 
@@ -38,7 +38,13 @@ public class ListasRepository {
 
     public void anadirCancionALista(int listaId, Cancion c) {
         executor.execute(() -> dao.insertarCancionEnLista(
-                new CancionEnListaEntity(listaId, c.getNombre(), c.getArtista(), c.getAlbum(), c.getRutaArchivo())
+                new CancionEnListaEntity(
+                        listaId,
+                        c.getNombre(),
+                        c.getArtista(),
+                        c.getAlbum(),
+                        c.getRutaArchivo()
+                )
         ));
     }
 
@@ -52,5 +58,19 @@ public class ListasRepository {
 
     public void actualizarRutaCancion(String rutaAntigua, String rutaNueva) {
         executor.execute(() -> dao.actualizarRutaCancion(rutaAntigua, rutaNueva));
+    }
+
+    public void actualizarCancion(String rutaAntigua,
+                                  String rutaNueva,
+                                  String nombre,
+                                  String artista,
+                                  String album) {
+        executor.execute(() -> dao.actualizarCancion(
+                rutaAntigua,
+                rutaNueva,
+                nombre,
+                artista,
+                album
+        ));
     }
 }

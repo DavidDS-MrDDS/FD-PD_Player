@@ -40,7 +40,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.favoritosRoom.FavoritosLoca
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasRepository;
 import es.iesagora.fd_pdplayer.databinding.FragmentOrganizarAlmacenamientoBinding;
 import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class OrganizarAlmacenamientoFragment extends Fragment {
 

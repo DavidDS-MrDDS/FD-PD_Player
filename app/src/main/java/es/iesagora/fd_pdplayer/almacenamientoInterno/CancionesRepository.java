@@ -2,15 +2,18 @@ package es.iesagora.fd_pdplayer.almacenamientoInterno;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.media.MediaMetadataRetriever;
 import android.provider.MediaStore;
+import android.text.TextUtils;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionesRepository {
 
@@ -18,7 +21,7 @@ public class CancionesRepository {
     private final CancionesOcultasRepository cancionesOcultasRepository;
 
     public CancionesRepository(Context context) {
-        this.context = context;
+        this.context = context.getApplicationContext();
         cancionesOcultasRepository = new CancionesOcultasRepository(context);
     }
 
@@ -43,7 +46,6 @@ public class CancionesRepository {
                 MediaStore.Audio.Media.TITLE,
                 MediaStore.Audio.Media.ARTIST,
                 MediaStore.Audio.Media.ALBUM,
-                MediaStore.Audio.Media.ALBUM_ID,
                 MediaStore.Audio.Media.DATA,
                 MediaStore.Audio.Media.DATE_ADDED
         };
@@ -67,43 +69,23 @@ public class CancionesRepository {
             while (cursor.moveToNext()) {
                 String rutaArchivo = cursor.getString(colRuta);
 
-                if (rutaArchivo == null || rutasOcultas.contains(rutaArchivo)) {
+                if (TextUtils.isEmpty(rutaArchivo) || rutasOcultas.contains(rutaArchivo)) {
                     continue;
                 }
 
-                String titulo = cursor.getString(colTitulo);
-                if (titulo == null || titulo.trim().isEmpty()) {
-                    titulo = "<unknown>";
-                }
+                String tituloMediaStore = cursor.getString(colTitulo);
+                String artistaMediaStore = cursor.getString(colArtista);
+                String albumMediaStore = cursor.getString(colAlbum);
 
-                String artista = cursor.getString(colArtista);
-                if (artista == null || artista.trim().isEmpty() || artista.equalsIgnoreCase("<unknown>")) {
-                    artista = "<unknown>";
-                }
+                Cancion cancion = construirCancionConMetadatos(
+                        rutaArchivo,
+                        tituloMediaStore,
+                        artistaMediaStore,
+                        albumMediaStore
+                );
 
-                String album = cursor.getString(colAlbum);
-                if (album == null || album.trim().isEmpty() || album.equalsIgnoreCase("<unknown>")) {
-                    album = "<unknown>";
-                }
-
-                String claveUnica = titulo + "|" + artista + "|" + album;
-
-                boolean encontrada = false;
-                for (Cancion c : canciones) {
-                    String claveExistente = c.getNombre() + "|" + c.getArtista() + "|" + c.getAlbum();
-                    if (claveExistente.equals(claveUnica)) {
-                        encontrada = true;
-                        break;
-                    }
-                }
-
-                if (!encontrada) {
-                    canciones.add(new Cancion(
-                            titulo,
-                            artista,
-                            album,
-                            rutaArchivo
-                    ));
+                if (!yaExisteCancion(canciones, cancion)) {
+                    canciones.add(cancion);
                 }
             }
 
@@ -111,5 +93,280 @@ public class CancionesRepository {
         }
 
         return canciones;
+    }
+
+    private Cancion construirCancionConMetadatos(String rutaArchivo,
+                                                 String tituloMediaStore,
+                                                 String artistaMediaStore,
+                                                 String albumMediaStore) {
+
+        String titulo = limpiarValor(tituloMediaStore);
+        String artista = limpiarValor(artistaMediaStore);
+        String album = limpiarValor(albumMediaStore);
+
+        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+
+        try {
+            mmr.setDataSource(rutaArchivo);
+
+            String tituloReal = limpiarValor(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE));
+            String artistaReal = limpiarValor(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST));
+            String albumReal = limpiarValor(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM));
+
+            if (!TextUtils.isEmpty(tituloReal)) {
+                titulo = tituloReal;
+            }
+
+            if (!TextUtils.isEmpty(artistaReal)) {
+                artista = artistaReal;
+            }
+
+            if (!TextUtils.isEmpty(albumReal)) {
+                album = albumReal;
+            }
+
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                mmr.release();
+            } catch (Exception ignored) {
+            }
+        }
+
+        String nombreArchivoSinExtension = obtenerNombreArchivoSinExtension(rutaArchivo);
+
+        if (TextUtils.isEmpty(titulo)) {
+            titulo = nombreArchivoSinExtension;
+        }
+
+        if (tituloPareceNombreDeArchivo(titulo)) {
+            titulo = quitarExtensionSiExiste(titulo);
+        }
+
+        titulo = limpiarTituloVisible(titulo);
+
+        if (TextUtils.isEmpty(artista)) {
+            artista = "<unknown>";
+        }
+
+        if (TextUtils.isEmpty(album)) {
+            album = "<unknown>";
+        }
+
+        DatosDesdeNombre datosDesdeNombre = intentarSepararArtistaYTitulo(titulo);
+
+        if (datosDesdeNombre != null) {
+            if (artista.equalsIgnoreCase("<unknown>")
+                    || titulo.toLowerCase().startsWith(artista.toLowerCase() + " - ")) {
+                artista = datosDesdeNombre.artista;
+            }
+
+            titulo = datosDesdeNombre.titulo;
+        } else {
+            DatosDesdeNombre datosDesdeArchivo = intentarSepararArtistaYTitulo(
+                    limpiarTituloVisible(nombreArchivoSinExtension)
+            );
+
+            if (datosDesdeArchivo != null) {
+                boolean tituloMalo = titulo.equalsIgnoreCase(nombreArchivoSinExtension)
+                        || titulo.toLowerCase().startsWith(datosDesdeArchivo.artista.toLowerCase() + " - ");
+
+                if (tituloMalo) {
+                    titulo = datosDesdeArchivo.titulo;
+                }
+
+                if (artista.equalsIgnoreCase("<unknown>")) {
+                    artista = datosDesdeArchivo.artista;
+                }
+            }
+        }
+
+        if (albumPareceIncorrecto(album, titulo, artista, nombreArchivoSinExtension)) {
+            album = "<unknown>";
+        }
+
+        return new Cancion(
+                titulo,
+                artista,
+                album,
+                rutaArchivo
+        );
+    }
+
+    private boolean yaExisteCancion(List<Cancion> canciones, Cancion nueva) {
+        if (canciones == null || nueva == null) {
+            return false;
+        }
+
+        String rutaNueva = safe(nueva.getRutaArchivo());
+
+        for (Cancion existente : canciones) {
+            if (rutaNueva.equals(safe(existente.getRutaArchivo()))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private String limpiarValor(String valor) {
+        if (valor == null) {
+            return "";
+        }
+
+        valor = valor.trim();
+
+        if (valor.isEmpty()) {
+            return "";
+        }
+
+        if (valor.equalsIgnoreCase("<unknown>")
+                || valor.equalsIgnoreCase("unknown")
+                || valor.equalsIgnoreCase("null")) {
+            return "";
+        }
+
+        return valor;
+    }
+
+    private String obtenerNombreArchivoSinExtension(String rutaArchivo) {
+        if (TextUtils.isEmpty(rutaArchivo)) {
+            return "";
+        }
+
+        File file = new File(rutaArchivo);
+        String nombre = file.getName();
+
+        return quitarExtensionSiExiste(nombre);
+    }
+
+    private String quitarExtensionSiExiste(String texto) {
+        if (TextUtils.isEmpty(texto)) {
+            return "";
+        }
+
+        int punto = texto.lastIndexOf(".");
+
+        if (punto > 0) {
+            return texto.substring(0, punto);
+        }
+
+        return texto;
+    }
+
+    private boolean tituloPareceNombreDeArchivo(String titulo) {
+        if (TextUtils.isEmpty(titulo)) {
+            return false;
+        }
+
+        String lower = titulo.toLowerCase();
+
+        return lower.endsWith(".mp3")
+                || lower.endsWith(".m4a")
+                || lower.endsWith(".wav")
+                || lower.endsWith(".ogg")
+                || lower.endsWith(".flac");
+    }
+
+    private String limpiarTituloVisible(String titulo) {
+        if (titulo == null) {
+            return "";
+        }
+
+        String limpio = titulo.trim();
+
+        limpio = limpio.replaceAll("(?i)\\s*\\(audio\\)\\s*$", "");
+        limpio = limpio.replaceAll("(?i)\\s*\\[audio\\]\\s*$", "");
+        limpio = limpio.replaceAll("(?i)\\s*\\(official audio\\)\\s*$", "");
+        limpio = limpio.replaceAll("(?i)\\s*\\[official audio\\]\\s*$", "");
+        limpio = limpio.replaceAll("(?i)\\s*\\(lyrics\\)\\s*$", "");
+        limpio = limpio.replaceAll("(?i)\\s*\\[lyrics\\]\\s*$", "");
+
+        return limpio.trim();
+    }
+
+    private DatosDesdeNombre intentarSepararArtistaYTitulo(String texto) {
+        if (TextUtils.isEmpty(texto)) {
+            return null;
+        }
+
+        String limpio = texto.trim();
+
+        String separador = null;
+
+        if (limpio.contains(" - ")) {
+            separador = " - ";
+        } else if (limpio.contains(" – ")) {
+            separador = " – ";
+        } else if (limpio.contains(" — ")) {
+            separador = " — ";
+        }
+
+        if (separador == null) {
+            return null;
+        }
+
+        String[] partes = limpio.split(java.util.regex.Pattern.quote(separador), 2);
+
+        if (partes.length != 2) {
+            return null;
+        }
+
+        String posibleArtista = partes[0].trim();
+        String posibleTitulo = partes[1].trim();
+
+        posibleTitulo = limpiarTituloVisible(posibleTitulo);
+
+        if (TextUtils.isEmpty(posibleArtista) || TextUtils.isEmpty(posibleTitulo)) {
+            return null;
+        }
+
+        return new DatosDesdeNombre(posibleArtista, posibleTitulo);
+    }
+
+    private boolean albumPareceIncorrecto(String album,
+                                          String titulo,
+                                          String artista,
+                                          String nombreArchivoSinExtension) {
+        if (TextUtils.isEmpty(album)) {
+            return true;
+        }
+
+        if (album.equalsIgnoreCase("<unknown>")) {
+            return false;
+        }
+
+        String albumLimpio = limpiarTituloVisible(album);
+        String tituloLimpio = limpiarTituloVisible(titulo);
+        String archivoLimpio = limpiarTituloVisible(nombreArchivoSinExtension);
+
+        if (albumLimpio.equalsIgnoreCase(tituloLimpio)) {
+            return true;
+        }
+
+        if (albumLimpio.equalsIgnoreCase(archivoLimpio)) {
+            return true;
+        }
+
+        if (!TextUtils.isEmpty(artista)
+                && albumLimpio.equalsIgnoreCase(artista + " - " + tituloLimpio)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static class DatosDesdeNombre {
+        String artista;
+        String titulo;
+
+        DatosDesdeNombre(String artista, String titulo) {
+            this.artista = artista;
+            this.titulo = titulo;
+        }
     }
 }

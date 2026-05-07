@@ -31,4 +31,7 @@ public interface FavoritosDao {
 
     @Query("UPDATE favoritos_local SET rutaArchivo = :rutaNueva WHERE rutaArchivo = :rutaAntigua")
     void actualizarRutaCancion(String rutaAntigua, String rutaNueva);
+
+    @Query("UPDATE favoritos_local SET rutaArchivo = :rutaNueva, nombre = :nombre, artista = :artista, album = :album WHERE rutaArchivo = :rutaAntigua")
+    void actualizarCancion(String rutaAntigua, String rutaNueva, String nombre, String artista, String album);
 }

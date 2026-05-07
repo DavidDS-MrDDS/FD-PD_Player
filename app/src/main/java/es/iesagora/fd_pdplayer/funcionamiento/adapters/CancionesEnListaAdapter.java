@@ -16,7 +16,7 @@ import java.util.List;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.ViewholderCancionEnListaBinding;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionesEnListaAdapter extends RecyclerView.Adapter<CancionesEnListaAdapter.CancionEnListaViewHolder> {
 

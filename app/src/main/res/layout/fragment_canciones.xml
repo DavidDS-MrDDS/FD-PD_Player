@@ -15,9 +15,9 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="14dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:layout_marginBottom="14dp">
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/tvCount"
@@ -30,16 +30,16 @@
             android:textColor="#9AA3B2"
             android:textSize="11sp" />
 
-        <TextView
+        <ImageButton
             android:id="@+id/btnSort"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableLeft="@android:drawable/ic_menu_sort_by_size"
-            android:drawablePadding="6dp"
-            android:padding="4dp"
-            android:text="Sort"
-            android:textColor="#1337EC"
-            android:textSize="11sp" />
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_busqueda_boton"
+            android:contentDescription="Ordenar canciones"
+            android:padding="10dp"
+            android:scaleType="centerInside"
+            android:src="@android:drawable/ic_menu_sort_by_size"
+            app:tint="#E3E0F2" />
 
     </LinearLayout>
 

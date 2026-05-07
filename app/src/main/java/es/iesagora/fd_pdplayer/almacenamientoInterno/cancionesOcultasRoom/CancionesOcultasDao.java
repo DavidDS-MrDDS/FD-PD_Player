@@ -22,4 +22,7 @@ public interface CancionesOcultasDao {
 
     @Query("SELECT rutaArchivo FROM canciones_ocultas")
     List<String> obtenerRutasOcultasSync();
+
+    @Query("UPDATE canciones_ocultas SET rutaArchivo = :rutaNueva, nombre = :nombre, artista = :artista, album = :album WHERE rutaArchivo = :rutaAntigua")
+    void actualizarCancion(String rutaAntigua, String rutaNueva, String nombre, String artista, String album);
 }

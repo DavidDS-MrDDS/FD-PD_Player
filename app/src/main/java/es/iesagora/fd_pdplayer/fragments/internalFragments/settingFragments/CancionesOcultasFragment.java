@@ -1,6 +1,5 @@
 package es.iesagora.fd_pdplayer.fragments.internalFragments.settingFragments;
 
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -8,8 +7,6 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
-import android.widget.PopupMenu;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,11 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionOcultaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionesOcultasBinding;
-import es.iesagora.fd_pdplayer.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
+import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionesOcultasFragment extends Fragment {
 
@@ -52,12 +50,14 @@ public class CancionesOcultasFragment extends Fragment {
         adapter = new CancionesAdapter(requireContext(), new ArrayList<>(), new CancionesAdapter.Listener() {
             @Override
             public void onOpcionesCancion(View anchor, Cancion cancion) {
-                mostrarMenuCancionOculta(anchor, cancion);
+                mostrarMenuCancionOculta(cancion);
             }
 
             @Override
             public void onClickCancion(Cancion cancion) {
-                Toast.makeText(requireContext(), "Canción oculta", Toast.LENGTH_SHORT).show();
+                if (binding != null) {
+                    VentanasApp.mostrarMensaje(binding.getRoot(), "Canción oculta");
+                }
             }
         });
 
@@ -165,57 +165,68 @@ public class CancionesOcultasFragment extends Fragment {
         return resultado;
     }
 
-    private void mostrarMenuCancionOculta(View anchor, Cancion cancion) {
-        PopupMenu popup = new PopupMenu(requireContext(), anchor);
-        popup.inflate(R.menu.menu_cancion_oculta);
+    private void mostrarMenuCancionOculta(Cancion cancion) {
+        String[] opciones = {
+                "Desocultar canción",
+                "Borrar del dispositivo"
+        };
 
-        popup.setOnMenuItemClickListener(item -> {
-            int itemId = item.getItemId();
+        VentanasApp.mostrarMenu(
+                requireContext(),
+                "MenuCancionOculta",
+                "Canción oculta",
+                safe(cancion.getNombre()),
+                opciones,
+                (posicion, texto) -> {
+                    if (posicion == 0) {
+                        desocultarCancion(cancion);
+                        return;
+                    }
 
-            if (itemId == R.id.action_unhide_song) {
-                desocultarCancion(cancion);
-                return true;
-            }
-
-            if (itemId == R.id.action_delete_hidden_song) {
-                confirmarBorrarDelDispositivo(cancion);
-                return true;
-            }
-
-            return false;
-        });
-
-        popup.show();
+                    if (posicion == 1) {
+                        confirmarBorrarDelDispositivo(cancion);
+                    }
+                }
+        );
     }
 
     private void desocultarCancion(Cancion cancion) {
         cancionesOcultasRepository.desocultarCancion(cancion.getRutaArchivo());
-        Toast.makeText(requireContext(), "Canción desocultada", Toast.LENGTH_SHORT).show();
+
+        if (binding != null) {
+            VentanasApp.mostrarMensaje(binding.getRoot(), "Canción desocultada");
+        }
     }
 
     private void confirmarBorrarDelDispositivo(Cancion cancion) {
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Borrar canción")
-                .setMessage("¿Quieres borrar \"" + cancion.getNombre() + "\" del dispositivo?\n\nEsta acción no se puede deshacer.")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Borrar", (dialog, which) -> borrarDelDispositivo(cancion))
-                .show();
+        VentanasApp.mostrarConfirmacion(
+                requireContext(),
+                "BorrarCancionOculta",
+                "Borrar canción",
+                "¿Quieres borrar \"" + safe(cancion.getNombre()) + "\" del dispositivo?\n\nEsta acción no se puede deshacer.",
+                "Borrar",
+                () -> borrarDelDispositivo(cancion)
+        );
     }
 
     private void borrarDelDispositivo(Cancion cancion) {
         cancionesOcultasRepository.borrarCancionDelDispositivo(cancion, new CancionesOcultasRepository.SimpleCallback() {
             @Override
             public void onSuccess(String message) {
-                requireActivity().runOnUiThread(() ->
-                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-                );
+                requireActivity().runOnUiThread(() -> {
+                    if (binding != null) {
+                        VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                    }
+                });
             }
 
             @Override
             public void onError(String message) {
-                requireActivity().runOnUiThread(() ->
-                        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
-                );
+                requireActivity().runOnUiThread(() -> {
+                    if (binding != null) {
+                        VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                    }
+                });
             }
         });
     }

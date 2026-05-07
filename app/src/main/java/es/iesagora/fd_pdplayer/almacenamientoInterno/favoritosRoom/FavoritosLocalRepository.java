@@ -49,7 +49,9 @@ public class FavoritosLocalRepository {
                             item.getAlbum() != null ? item.getAlbum() : "",
                             item.getRutaArchivo() != null ? item.getRutaArchivo() : "",
                             item.getStoragePath() != null ? item.getStoragePath() : "",
-                            item.getUsername() != null && !item.getUsername().isEmpty() ? item.getUsername() : fallbackUsername,
+                            item.getUsername() != null && !item.getUsername().isEmpty()
+                                    ? item.getUsername()
+                                    : fallbackUsername,
                             item.getCreatedAt() != null ? item.getCreatedAt() : "",
                             true
                     ));
@@ -62,5 +64,19 @@ public class FavoritosLocalRepository {
 
     public void actualizarRutaCancion(String rutaAntigua, String rutaNueva) {
         executor.execute(() -> dao.actualizarRutaCancion(rutaAntigua, rutaNueva));
+    }
+
+    public void actualizarCancion(String rutaAntigua,
+                                  String rutaNueva,
+                                  String nombre,
+                                  String artista,
+                                  String album) {
+        executor.execute(() -> dao.actualizarCancion(
+                rutaAntigua,
+                rutaNueva,
+                nombre,
+                artista,
+                album
+        ));
     }
 }

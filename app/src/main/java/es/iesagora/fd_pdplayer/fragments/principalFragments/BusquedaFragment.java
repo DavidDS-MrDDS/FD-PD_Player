@@ -1,8 +1,13 @@
 package es.iesagora.fd_pdplayer.fragments.principalFragments;
 
+import android.Manifest;
 import android.app.DownloadManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -13,16 +18,18 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
-import org.jetbrains.annotations.Nullable;
-
 import java.util.List;
 
-import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
-import es.iesagora.fd_pdplayer.funcionamiento.adapters.FavoritosRemotosAdapter;
+import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.usuarioRoom.SessionEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.usuarioRoom.SessionRepository;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.ApiClient;
@@ -30,6 +37,8 @@ import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.Favorite
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.FavoriteListResponse;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.FavoritesApiService;
 import es.iesagora.fd_pdplayer.databinding.FragmentBusquedaBinding;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.FavoritosRemotosAdapter;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -47,14 +56,46 @@ public class BusquedaFragment extends Fragment {
     private static final int PAGE = 1;
     private static final int LIMIT = 100;
 
+    private static final String CANAL_DESCARGAS_ID = "canal_descargas_fdpd";
+    private static final int NOTIFICACION_DESCARGA_ID = 3001;
+
+    private ActivityResultLauncher<String> permisoNotificacionesLauncher;
+    private FavoriteItem descargaPendiente;
+
     public BusquedaFragment() {
-        super(es.iesagora.fd_pdplayer.R.layout.fragment_busqueda);
+        super(R.layout.fragment_busqueda);
     }
 
     @Override
-    public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        permisoNotificacionesLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (descargaPendiente != null) {
+                        FavoriteItem item = descargaPendiente;
+                        descargaPendiente = null;
+
+                        if (!isGranted && isAdded() && binding != null) {
+                            VentanasApp.mostrarMensaje(
+                                    binding.getRoot(),
+                                    "No se permitió mostrar notificaciones, pero la descarga se iniciará"
+                            );
+                        }
+
+                        descargarCancion(item);
+                    }
+                }
+        );
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         binding = FragmentBusquedaBinding.bind(view);
+
+        crearCanalNotificaciones();
 
         apiService = ApiClient.getFavoritesApiService();
         sessionRepository = new SessionRepository(requireActivity().getApplication());
@@ -123,7 +164,10 @@ public class BusquedaFragment extends Fragment {
                         if (binding == null) return;
 
                         if (!response.isSuccessful()) {
-                            Toast.makeText(requireContext(), "No se pudieron cargar los favoritos públicos", Toast.LENGTH_SHORT).show();
+                            VentanasApp.mostrarMensaje(
+                                    binding.getRoot(),
+                                    "No se pudieron cargar los favoritos públicos"
+                            );
                             return;
                         }
 
@@ -154,7 +198,11 @@ public class BusquedaFragment extends Fragment {
                     @Override
                     public void onFailure(@NonNull Call<FavoriteListResponse> call, @NonNull Throwable t) {
                         if (binding == null) return;
-                        Toast.makeText(requireContext(), "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+
+                        VentanasApp.mostrarMensaje(
+                                binding.getRoot(),
+                                "Error de red: " + t.getMessage()
+                        );
                     }
                 });
     }
@@ -188,15 +236,33 @@ public class BusquedaFragment extends Fragment {
                 "Descargar canción",
                 "¿Quieres descargar \"" + safe(item.getNombre()) + "\"?",
                 "Descargar",
-                () -> descargarCancion(item)
+                () -> iniciarDescargaConPermiso(item)
         );
+    }
+
+    private void iniciarDescargaConPermiso(FavoriteItem item) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            descargaPendiente = item;
+            permisoNotificacionesLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            return;
+        }
+
+        descargarCancion(item);
     }
 
     private void descargarCancion(FavoriteItem item) {
         String url = item.getRutaArchivo();
 
         if (TextUtils.isEmpty(url)) {
-            Toast.makeText(requireContext(), "Esta canción no tiene una URL válida para descargar", Toast.LENGTH_SHORT).show();
+            if (binding != null) {
+                VentanasApp.mostrarMensaje(
+                        binding.getRoot(),
+                        "Esta canción no tiene una URL válida para descargar"
+                );
+            }
             return;
         }
 
@@ -205,27 +271,102 @@ public class BusquedaFragment extends Fragment {
 
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
             request.setTitle(nombreArchivo);
-            request.setDescription("Descargando canción...");
+            request.setDescription("Descargando canción desde FD-PD Player...");
             request.setMimeType("audio/mpeg");
+
             request.setAllowedOverMetered(true);
             request.setAllowedOverRoaming(true);
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, nombreArchivo);
 
-            DownloadManager downloadManager = (DownloadManager) requireContext().getSystemService(Context.DOWNLOAD_SERVICE);
+            request.setAllowedNetworkTypes(
+                    DownloadManager.Request.NETWORK_WIFI |
+                            DownloadManager.Request.NETWORK_MOBILE
+            );
+
+            request.setNotificationVisibility(
+                    DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+            );
+
+            request.setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    nombreArchivo
+            );
+
+            DownloadManager downloadManager =
+                    (DownloadManager) requireContext().getSystemService(Context.DOWNLOAD_SERVICE);
 
             if (downloadManager == null) {
-                Toast.makeText(requireContext(), "No se pudo iniciar la descarga", Toast.LENGTH_SHORT).show();
+                if (binding != null) {
+                    VentanasApp.mostrarMensaje(binding.getRoot(), "No se pudo iniciar la descarga");
+                }
                 return;
             }
 
             downloadManager.enqueue(request);
 
-            VentanasApp.mostrarMensaje(binding.getRoot(), "Descarga iniciada");
+            mostrarNotificacionDescargaIniciada(nombreArchivo);
+
+            if (binding != null) {
+                VentanasApp.mostrarMensaje(binding.getRoot(), "Descarga iniciada");
+            }
 
         } catch (Exception e) {
-            Toast.makeText(requireContext(), "Error al descargar: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            if (binding != null) {
+                VentanasApp.mostrarMensaje(
+                        binding.getRoot(),
+                        "Error al descargar: " + e.getMessage()
+                );
+            }
         }
+    }
+
+    private void crearCanalNotificaciones() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CANAL_DESCARGAS_ID,
+                    "Descargas",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+
+            channel.setDescription("Notificaciones de descargas de canciones");
+
+            NotificationManager notificationManager =
+                    (NotificationManager) requireContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    private void mostrarNotificacionDescargaIniciada(String nombreArchivo) {
+        if (!isAdded()) return;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        NotificationManager notificationManager =
+                (NotificationManager) requireContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (notificationManager == null) {
+            return;
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(requireContext(), CANAL_DESCARGAS_ID)
+                .setSmallIcon(R.drawable.ic_refresh)
+                .setContentTitle("Descargando canción")
+                .setContentText(nombreArchivo)
+                .setStyle(new NotificationCompat.BigTextStyle()
+                        .bigText("Descargando \"" + nombreArchivo + "\" desde FD-PD Player."))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true);
+
+        notificationManager.notify(
+                NOTIFICACION_DESCARGA_ID + (int) (System.currentTimeMillis() % 1000),
+                builder.build()
+        );
     }
 
     private String crearNombreArchivo(FavoriteItem item) {
