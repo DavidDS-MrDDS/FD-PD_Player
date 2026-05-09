@@ -1,8 +1,6 @@
 package es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -24,8 +22,9 @@ import java.util.concurrent.Executors;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionBinding;
-import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;
+import es.iesagora.fd_pdplayer.funcionamiento.ImagenCancionUtils;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
+import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;
 
 public class CancionFragment extends Fragment implements ReproductorApp.Listener {
 
@@ -51,8 +50,7 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentCancionBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -69,20 +67,13 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
         }
 
         prepararControles();
+
         reproductorApp.addListener(this);
         reproductorApp.reproducir(requireContext(), cancion, listaCanciones, posicion, false);
     }
 
     private void inicializarCacheImagenes() {
-        int memoriaMaximaKb = (int) (Runtime.getRuntime().maxMemory() / 1024);
-        int tamanoCacheKb = memoriaMaximaKb / 16;
-
-        imagenCache = new LruCache<String, Bitmap>(tamanoCacheKb) {
-            @Override
-            protected int sizeOf(String key, Bitmap value) {
-                return value.getByteCount() / 1024;
-            }
-        };
+        imagenCache = ImagenCancionUtils.crearCacheImagenes(16);
     }
 
     private void recogerDatos() {
@@ -112,11 +103,8 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
 
     private void prepararControles() {
         binding.btnPlayPause.setOnClickListener(v -> reproductorApp.toggle());
-
         binding.btnSiguiente.setOnClickListener(v -> reproductorApp.irSiguiente());
-
         binding.btnAnterior.setOnClickListener(v -> reproductorApp.irAnterior());
-
         binding.btnModoReproduccion.setOnClickListener(v -> reproductorApp.cambiarModoReproduccion());
 
         binding.seekBarProgreso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -138,15 +126,17 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
     }
 
     @Override
-    public void onReproductorActualizado(Cancion cancionActual,
-                                         ArrayList<Cancion> listaActual,
-                                         int posicionLista,
-                                         boolean preparada,
-                                         boolean reproduciendo,
-                                         int progresoMs,
-                                         int duracionMs,
-                                         int modoReproduccion,
-                                         boolean modoLista) {
+    public void onReproductorActualizado(
+            Cancion cancionActual,
+            ArrayList<Cancion> listaActual,
+            int posicionLista,
+            boolean preparada,
+            boolean reproduciendo,
+            int progresoMs,
+            int duracionMs,
+            int modoReproduccion,
+            boolean modoLista
+    ) {
         if (binding == null || cancionActual == null) return;
 
         this.cancion = cancionActual;
@@ -224,7 +214,7 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
         binding.ivCaratula.setImageResource(R.drawable.imagenotfound);
 
         imagenExecutor.execute(() -> {
-            Bitmap bitmap = obtenerImagenDesdeArchivoReducida(
+            Bitmap bitmap = ImagenCancionUtils.obtenerImagenDesdeArchivoReducida(
                     ruta,
                     dp(900),
                     dp(900)
@@ -268,75 +258,13 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
         }
     }
 
-    private Bitmap obtenerImagenDesdeArchivoReducida(String ruta, int anchoDeseado, int altoDeseado) {
-        if (TextUtils.isEmpty(ruta)) return null;
-
-        MediaMetadataRetriever mmr = null;
-
-        try {
-            mmr = new MediaMetadataRetriever();
-            mmr.setDataSource(ruta);
-
-            byte[] art = mmr.getEmbeddedPicture();
-
-            if (art == null) {
-                return null;
-            }
-
-            BitmapFactory.Options bounds = new BitmapFactory.Options();
-            bounds.inJustDecodeBounds = true;
-            BitmapFactory.decodeByteArray(art, 0, art.length, bounds);
-
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = calcularInSampleSize(bounds, anchoDeseado, altoDeseado);
-            options.inPreferredConfig = Bitmap.Config.RGB_565;
-
-            return BitmapFactory.decodeByteArray(art, 0, art.length, options);
-
-        } catch (Exception ignored) {
-            return null;
-
-        } finally {
-            try {
-                if (mmr != null) {
-                    mmr.release();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-    }
-
-    private int calcularInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        int height = options.outHeight;
-        int width = options.outWidth;
-
-        if (height <= 0 || width <= 0) {
-            return 1;
-        }
-
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-            int halfHeight = height / 2;
-            int halfWidth = width / 2;
-
-            while ((halfHeight / inSampleSize) >= reqHeight
-                    && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-
-        return Math.max(1, inSampleSize);
-    }
-
     private String formatearTiempo(int ms) {
         int s = Math.max(0, ms / 1000);
         return (s / 60) + ":" + String.format("%02d", s % 60);
     }
 
     private int dp(int value) {
-        float density = getResources().getDisplayMetrics().density;
-        return Math.round(value * density);
+        return ImagenCancionUtils.dp(requireContext(), value);
     }
 
     private String safe(String value) {
@@ -381,7 +309,6 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
 
         versionCargaImagen++;
         reproductorApp.removeListener(this);
-
         binding = null;
     }
 

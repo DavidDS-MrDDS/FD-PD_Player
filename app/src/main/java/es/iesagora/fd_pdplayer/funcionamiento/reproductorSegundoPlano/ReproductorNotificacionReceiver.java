@@ -31,9 +31,7 @@ public class ReproductorNotificacionReceiver extends BroadcastReceiver {
 
         if (ReproductorNotificacion.ACTION_DETENER.equals(action)) {
             reproductorApp.liberar();
-
-            ReproductorNotificacion notificacion = new ReproductorNotificacion(context);
-            notificacion.cancelar();
+            ReproductorNotificacion.cancelarNotificacion(context);
         }
     }
 }

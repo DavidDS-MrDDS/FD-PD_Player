@@ -8,11 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.text.TextUtils;
 import android.util.LruCache;
@@ -28,6 +23,7 @@ import java.util.concurrent.Executors;
 
 import es.iesagora.fd_pdplayer.MainActivity;
 import es.iesagora.fd_pdplayer.R;
+import es.iesagora.fd_pdplayer.funcionamiento.ImagenCancionUtils;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class ReproductorNotificacion implements ReproductorApp.Listener {
@@ -56,16 +52,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
     public ReproductorNotificacion(Context context) {
         this.context = context.getApplicationContext();
         this.notificationManager = NotificationManagerCompat.from(this.context);
-
-        int memoriaMaximaKb = (int) (Runtime.getRuntime().maxMemory() / 1024);
-        int tamanoCacheKb = memoriaMaximaKb / 24;
-
-        imagenCache = new LruCache<String, Bitmap>(tamanoCacheKb) {
-            @Override
-            protected int sizeOf(String key, Bitmap value) {
-                return value.getByteCount() / 1024;
-            }
-        };
+        this.imagenCache = ImagenCancionUtils.crearCacheImagenes(24);
 
         crearCanal();
     }
@@ -92,16 +79,17 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
     }
 
     @Override
-    public void onReproductorActualizado(Cancion cancionActual,
-                                         ArrayList<Cancion> listaCanciones,
-                                         int posicionLista,
-                                         boolean preparada,
-                                         boolean reproduciendo,
-                                         int progresoMs,
-                                         int duracionMs,
-                                         int modoReproduccion,
-                                         boolean modoLista) {
-
+    public void onReproductorActualizado(
+            Cancion cancionActual,
+            ArrayList<Cancion> listaCanciones,
+            int posicionLista,
+            boolean preparada,
+            boolean reproduciendo,
+            int progresoMs,
+            int duracionMs,
+            int modoReproduccion,
+            boolean modoLista
+    ) {
         if (cancionActual == null) {
             cancelar();
             ultimaRuta = "";
@@ -111,8 +99,8 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         }
 
         long ahora = System.currentTimeMillis();
-        String rutaActual = safe(cancionActual.getRutaArchivo());
 
+        String rutaActual = safe(cancionActual.getRutaArchivo());
         boolean cambioCancion = !rutaActual.equals(ultimaRuta);
         boolean cambioEstado = reproduciendo != ultimoEstadoReproduciendo;
         boolean actualizarProgreso = ahora - ultimaActualizacionProgreso >= 1000;
@@ -134,12 +122,13 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         );
     }
 
-    private void mostrarActualizar(Cancion cancion,
-                                   boolean preparada,
-                                   boolean reproduciendo,
-                                   int progresoMs,
-                                   int duracionMs) {
-
+    private void mostrarActualizar(
+            Cancion cancion,
+            boolean preparada,
+            boolean reproduciendo,
+            int progresoMs,
+            int duracionMs
+    ) {
         if (!tienePermisoNotificaciones()) {
             return;
         }
@@ -172,12 +161,13 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         }
     }
 
-    private RemoteViews crearRemoteViews(Cancion cancion,
-                                         boolean preparada,
-                                         boolean reproduciendo,
-                                         int progresoMs,
-                                         int duracionMs) {
-
+    private RemoteViews crearRemoteViews(
+            Cancion cancion,
+            boolean preparada,
+            boolean reproduciendo,
+            int progresoMs,
+            int duracionMs
+    ) {
         RemoteViews views = new RemoteViews(
                 context.getPackageName(),
                 R.layout.notification_reproductor
@@ -192,7 +182,13 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
 
         views.setTextViewText(R.id.tvNotifArtista, artista);
 
-        Bitmap imagen = obtenerImagenCacheada(cancion, preparada, reproduciendo, progresoMs, duracionMs);
+        Bitmap imagen = obtenerImagenCacheada(
+                cancion,
+                preparada,
+                reproduciendo,
+                progresoMs,
+                duracionMs
+        );
 
         if (imagen != null) {
             views.setImageViewBitmap(R.id.ivNotifImagen, imagen);
@@ -234,6 +230,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         int progresoSeguro = Math.max(0, Math.min(progresoMs, duracionSegura));
 
         views.setTextViewText(R.id.tvNotifTiempoActual, formatearTiempo(progresoSeguro));
+
         views.setTextViewText(
                 R.id.tvNotifTiempoFinal,
                 preparada && duracionMs > 0 ? formatearTiempo(duracionMs) : "--:--"
@@ -249,11 +246,13 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         return views;
     }
 
-    private Bitmap obtenerImagenCacheada(Cancion cancion,
-                                         boolean preparada,
-                                         boolean reproduciendo,
-                                         int progresoMs,
-                                         int duracionMs) {
+    private Bitmap obtenerImagenCacheada(
+            Cancion cancion,
+            boolean preparada,
+            boolean reproduciendo,
+            int progresoMs,
+            int duracionMs
+    ) {
         if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
             return null;
         }
@@ -277,11 +276,13 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         return null;
     }
 
-    private void cargarImagenNotificacionAsync(Cancion cancion,
-                                               boolean preparada,
-                                               boolean reproduciendo,
-                                               int progresoMs,
-                                               int duracionMs) {
+    private void cargarImagenNotificacionAsync(
+            Cancion cancion,
+            boolean preparada,
+            boolean reproduciendo,
+            int progresoMs,
+            int duracionMs
+    ) {
         if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
             return;
         }
@@ -293,10 +294,16 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         }
 
         rutaImagenCargando = ruta;
+
         final int versionActual = ++versionCargaImagen;
 
         imagenExecutor.execute(() -> {
-            Bitmap bitmap = obtenerImagenDesdeArchivoRedondeada(ruta);
+            Bitmap bitmap = ImagenCancionUtils.obtenerImagenDesdeArchivoRedondeada(
+                    ruta,
+                    dp(96),
+                    dp(96),
+                    dp(12)
+            );
 
             if (bitmap != null) {
                 imagenCache.put(ruta, bitmap);
@@ -362,6 +369,13 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         notificationManager.cancel(NOTIFICATION_ID);
     }
 
+    public static void cancelarNotificacion(Context context) {
+        if (context == null) return;
+
+        NotificationManagerCompat.from(context.getApplicationContext())
+                .cancel(NOTIFICATION_ID);
+    }
+
     public void liberar() {
         cancelar();
         imagenExecutor.shutdownNow();
@@ -379,112 +393,6 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         ) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private Bitmap obtenerImagenDesdeArchivoRedondeada(String ruta) {
-        if (TextUtils.isEmpty(ruta)) return null;
-
-        MediaMetadataRetriever mmr = null;
-
-        try {
-            mmr = new MediaMetadataRetriever();
-            mmr.setDataSource(ruta);
-
-            byte[] art = mmr.getEmbeddedPicture();
-
-            if (art == null) {
-                return null;
-            }
-
-            BitmapFactory.Options bounds = new BitmapFactory.Options();
-            bounds.inJustDecodeBounds = true;
-            BitmapFactory.decodeByteArray(art, 0, art.length, bounds);
-
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = calcularInSampleSize(bounds, dp(96), dp(96));
-            options.inPreferredConfig = Bitmap.Config.RGB_565;
-
-            Bitmap bitmap = BitmapFactory.decodeByteArray(art, 0, art.length, options);
-
-            if (bitmap == null) {
-                return null;
-            }
-
-            return crearBitmapRedondeado(bitmap, dp(12));
-
-        } catch (Exception ignored) {
-            return null;
-
-        } finally {
-            try {
-                if (mmr != null) {
-                    mmr.release();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-    }
-
-    private int calcularInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        int height = options.outHeight;
-        int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-            int halfHeight = height / 2;
-            int halfWidth = width / 2;
-
-            while ((halfHeight / inSampleSize) >= reqHeight
-                    && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-
-        return Math.max(1, inSampleSize);
-    }
-
-    private Bitmap crearBitmapRedondeado(Bitmap bitmap, float radio) {
-        if (bitmap == null) return null;
-
-        Bitmap bitmapCuadrado = recortarCentroCuadrado(bitmap);
-
-        Bitmap salida = Bitmap.createBitmap(
-                bitmapCuadrado.getWidth(),
-                bitmapCuadrado.getHeight(),
-                Bitmap.Config.ARGB_8888
-        );
-
-        Canvas canvas = new Canvas(salida);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-
-        RectF rect = new RectF(
-                0,
-                0,
-                bitmapCuadrado.getWidth(),
-                bitmapCuadrado.getHeight()
-        );
-
-        canvas.drawRoundRect(rect, radio, radio, paint);
-
-        paint.setXfermode(new android.graphics.PorterDuffXfermode(
-                android.graphics.PorterDuff.Mode.SRC_IN
-        ));
-
-        canvas.drawBitmap(bitmapCuadrado, 0, 0, paint);
-
-        return salida;
-    }
-
-    private Bitmap recortarCentroCuadrado(Bitmap bitmap) {
-        int ancho = bitmap.getWidth();
-        int alto = bitmap.getHeight();
-
-        int lado = Math.min(ancho, alto);
-
-        int x = (ancho - lado) / 2;
-        int y = (alto - lado) / 2;
-
-        return Bitmap.createBitmap(bitmap, x, y, lado, lado);
-    }
-
     private String formatearTiempo(int ms) {
         int segundos = Math.max(0, ms / 1000);
         return (segundos / 60) + ":" + String.format("%02d", segundos % 60);
@@ -495,7 +403,6 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
     }
 
     private int dp(int value) {
-        float density = context.getResources().getDisplayMetrics().density;
-        return Math.round(value * density);
+        return ImagenCancionUtils.dp(context, value);
     }
 }

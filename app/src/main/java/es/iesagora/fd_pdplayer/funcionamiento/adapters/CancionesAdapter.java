@@ -2,8 +2,6 @@ package es.iesagora.fd_pdplayer.funcionamiento.adapters;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.MediaMetadataRetriever;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -24,12 +22,14 @@ import java.util.concurrent.Executors;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.ViewholderCancionBinding;
+import es.iesagora.fd_pdplayer.funcionamiento.ImagenCancionUtils;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.CancionViewHolder> {
 
     public interface Listener {
         void onOpcionesCancion(View anchor, Cancion cancion);
+
         void onClickCancion(Cancion cancion);
     }
 
@@ -39,7 +39,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService executorCaratulas = Executors.newFixedThreadPool(2);
-
     private final LruCache<String, Bitmap> cacheCaratulas;
     private final Set<String> rutasCargando = ConcurrentHashMap.newKeySet();
 
@@ -49,16 +48,7 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
         this.canciones = canciones != null ? canciones : new ArrayList<>();
         this.inflater = LayoutInflater.from(context);
         this.listener = listener;
-
-        int maxMemoryKb = (int) (Runtime.getRuntime().maxMemory() / 1024);
-        int cacheSizeKb = maxMemoryKb / 8;
-
-        cacheCaratulas = new LruCache<String, Bitmap>(cacheSizeKb) {
-            @Override
-            protected int sizeOf(@NonNull String key, @NonNull Bitmap bitmap) {
-                return bitmap.getByteCount() / 1024;
-            }
-        };
+        this.cacheCaratulas = ImagenCancionUtils.crearCacheImagenes(8);
     }
 
     @NonNull
@@ -78,6 +68,7 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
         String artista = safe(cancion.getArtista());
 
         String sub;
+
         if (!TextUtils.isEmpty(album) && !TextUtils.isEmpty(artista)) {
             sub = album + " • " + artista;
         } else if (!TextUtils.isEmpty(album)) {
@@ -129,7 +120,11 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
         rutasCargando.add(ruta);
 
         executorCaratulas.execute(() -> {
-            Bitmap bitmap = obtenerCaratulaDesdeArchivo(ruta);
+            Bitmap bitmap = ImagenCancionUtils.obtenerImagenDesdeArchivoReducida(
+                    ruta,
+                    160,
+                    160
+            );
 
             if (bitmap != null) {
                 cacheCaratulas.put(ruta, bitmap);
@@ -172,76 +167,12 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
         rutasCargando.clear();
     }
 
-    private Bitmap obtenerCaratulaDesdeArchivo(String ruta) {
-        if (TextUtils.isEmpty(ruta)) {
-            return null;
-        }
-
-        MediaMetadataRetriever mmr = null;
-
-        try {
-            mmr = new MediaMetadataRetriever();
-            mmr.setDataSource(ruta);
-
-            byte[] art = mmr.getEmbeddedPicture();
-
-            if (art != null) {
-                return decodificarBitmapReducido(art, 160, 160);
-            }
-
-        } catch (Exception ignored) {
-        } finally {
-            try {
-                if (mmr != null) {
-                    mmr.release();
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        return null;
-    }
-
-    private Bitmap decodificarBitmapReducido(byte[] data, int reqWidth, int reqHeight) {
-        if (data == null) {
-            return null;
-        }
-
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-
-        BitmapFactory.decodeByteArray(data, 0, data.length, options);
-
-        options.inSampleSize = calcularInSampleSize(options, reqWidth, reqHeight);
-        options.inJustDecodeBounds = false;
-        options.inPreferredConfig = Bitmap.Config.RGB_565;
-
-        return BitmapFactory.decodeByteArray(data, 0, data.length, options);
-    }
-
-    private int calcularInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        int height = options.outHeight;
-        int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-            int halfHeight = height / 2;
-            int halfWidth = width / 2;
-
-            while ((halfHeight / inSampleSize) >= reqHeight
-                    && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-
-        return Math.max(inSampleSize, 1);
-    }
-
     private String safe(String s) {
         return s == null ? "" : s;
     }
 
     public static class CancionViewHolder extends RecyclerView.ViewHolder {
+
         ViewholderCancionBinding binding;
 
         public CancionViewHolder(@NonNull View itemView) {

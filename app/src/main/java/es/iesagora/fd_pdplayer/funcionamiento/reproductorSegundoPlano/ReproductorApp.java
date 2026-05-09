@@ -401,15 +401,8 @@ public class ReproductorApp {
         return posicionLista;
     }
 
-    public int getModoReproduccion() {
-        return modoReproduccion;
-    }
-
     public boolean isModoLista() {
         return modoLista;
     }
 
-    public boolean isPreparando() {
-        return preparando;
-    }
 }
