@@ -50,7 +50,7 @@
         </activity>
 
         <receiver
-            android:name=".funcionamiento.ReproductorNotificacionReceiver"
+            android:name=".funcionamiento.reproductorSegundoPlano.ReproductorNotificacionReceiver"
             android:exported="false" />
 
     </application>

@@ -95,6 +95,12 @@
         android:label="Organizar almacenamiento"
         tools:layout="@layout/fragment_organizar_almacenamiento" />
 
+    <fragment
+        android:id="@+id/contactoFragment"
+        android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.settingFragments.ContactoFragment"
+        android:label="Contacto"
+        tools:layout="@layout/fragment_contacto" />
+
     <!-- Otros -->
 
     <fragment

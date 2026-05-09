@@ -6,6 +6,7 @@ import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,10 +19,12 @@ import androidx.fragment.app.Fragment;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionBinding;
-import es.iesagora.fd_pdplayer.funcionamiento.ReproductorApp;
+import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionFragment extends Fragment implements ReproductorApp.Listener {
@@ -36,6 +39,16 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
 
     private String rutaPintada;
     private boolean usuarioMoviendoSeekBar = false;
+
+    private final ExecutorService imagenExecutor = Executors.newSingleThreadExecutor();
+    private LruCache<String, Bitmap> imagenCache;
+    private int versionCargaImagen = 0;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        inicializarCacheImagenes();
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -58,6 +71,18 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
         prepararControles();
         reproductorApp.addListener(this);
         reproductorApp.reproducir(requireContext(), cancion, listaCanciones, posicion, false);
+    }
+
+    private void inicializarCacheImagenes() {
+        int memoriaMaximaKb = (int) (Runtime.getRuntime().maxMemory() / 1024);
+        int tamanoCacheKb = memoriaMaximaKb / 16;
+
+        imagenCache = new LruCache<String, Bitmap>(tamanoCacheKb) {
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                return value.getByteCount() / 1024;
+            }
+        };
     }
 
     private void recogerDatos() {
@@ -137,10 +162,10 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
         );
 
         if (preparada) {
-            binding.seekBarProgreso.setMax(duracionMs);
+            binding.seekBarProgreso.setMax(Math.max(duracionMs, 1));
 
             if (!usuarioMoviendoSeekBar) {
-                binding.seekBarProgreso.setProgress(progresoMs);
+                binding.seekBarProgreso.setProgress(Math.max(progresoMs, 0));
             }
 
             binding.tvTiempoActual.setText(formatearTiempo(progresoMs));
@@ -176,13 +201,53 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
 
         binding.tvSubCancion.setText(sub);
 
-        Bitmap bmp = obtenerImagenDesdeArchivo(cancion.getRutaArchivo());
+        cargarImagenCancion(rutaPintada);
+    }
 
-        if (bmp != null) {
-            binding.ivCaratula.setImageBitmap(bmp);
-        } else {
+    private void cargarImagenCancion(String ruta) {
+        if (binding == null) return;
+
+        final int versionActual = ++versionCargaImagen;
+
+        if (TextUtils.isEmpty(ruta)) {
             binding.ivCaratula.setImageResource(R.drawable.imagenotfound);
+            return;
         }
+
+        Bitmap bitmapCacheado = imagenCache != null ? imagenCache.get(ruta) : null;
+
+        if (bitmapCacheado != null) {
+            binding.ivCaratula.setImageBitmap(bitmapCacheado);
+            return;
+        }
+
+        binding.ivCaratula.setImageResource(R.drawable.imagenotfound);
+
+        imagenExecutor.execute(() -> {
+            Bitmap bitmap = obtenerImagenDesdeArchivoReducida(
+                    ruta,
+                    dp(900),
+                    dp(900)
+            );
+
+            if (bitmap != null && imagenCache != null) {
+                imagenCache.put(ruta, bitmap);
+            }
+
+            if (!isAdded()) return;
+
+            requireActivity().runOnUiThread(() -> {
+                if (binding == null) return;
+                if (versionActual != versionCargaImagen) return;
+                if (!ruta.equals(rutaPintada)) return;
+
+                if (bitmap != null) {
+                    binding.ivCaratula.setImageBitmap(bitmap);
+                } else {
+                    binding.ivCaratula.setImageResource(R.drawable.imagenotfound);
+                }
+            });
+        });
     }
 
     private void actualizarBotonModoReproduccion(int modoReproduccion) {
@@ -203,30 +268,75 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
         }
     }
 
-    private Bitmap obtenerImagenDesdeArchivo(String ruta) {
+    private Bitmap obtenerImagenDesdeArchivoReducida(String ruta, int anchoDeseado, int altoDeseado) {
         if (TextUtils.isEmpty(ruta)) return null;
 
+        MediaMetadataRetriever mmr = null;
+
         try {
-            MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            mmr = new MediaMetadataRetriever();
             mmr.setDataSource(ruta);
 
             byte[] art = mmr.getEmbeddedPicture();
 
-            mmr.release();
-
-            if (art != null) {
-                return BitmapFactory.decodeByteArray(art, 0, art.length);
+            if (art == null) {
+                return null;
             }
 
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(art, 0, art.length, bounds);
+
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = calcularInSampleSize(bounds, anchoDeseado, altoDeseado);
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
+
+            return BitmapFactory.decodeByteArray(art, 0, art.length, options);
+
         } catch (Exception ignored) {
+            return null;
+
+        } finally {
+            try {
+                if (mmr != null) {
+                    mmr.release();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private int calcularInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        int height = options.outHeight;
+        int width = options.outWidth;
+
+        if (height <= 0 || width <= 0) {
+            return 1;
         }
 
-        return null;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+            int halfHeight = height / 2;
+            int halfWidth = width / 2;
+
+            while ((halfHeight / inSampleSize) >= reqHeight
+                    && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+
+        return Math.max(1, inSampleSize);
     }
 
     private String formatearTiempo(int ms) {
-        int s = ms / 1000;
+        int s = Math.max(0, ms / 1000);
         return (s / 60) + ":" + String.format("%02d", s % 60);
+    }
+
+    private int dp(int value) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(value * density);
     }
 
     private String safe(String value) {
@@ -268,7 +378,21 @@ public class CancionFragment extends Fragment implements ReproductorApp.Listener
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+
+        versionCargaImagen++;
         reproductorApp.removeListener(this);
+
         binding = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        imagenExecutor.shutdownNow();
+
+        if (imagenCache != null) {
+            imagenCache.evictAll();
+        }
     }
 }

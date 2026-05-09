@@ -85,122 +85,68 @@
 
             </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/rowBackup"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/bg_ajustes_item"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="12dp">
+            <!-- CANCELADO -->
 
-                <FrameLayout
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:background="@drawable/bg_ajustes_icon_box">
+<!--            <LinearLayout-->
+<!--                android:id="@+id/rowBackup"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="72dp"-->
+<!--                android:layout_marginBottom="12dp"-->
+<!--                android:background="@drawable/bg_ajustes_item"-->
+<!--                android:clickable="true"-->
+<!--                android:focusable="true"-->
+<!--                android:foreground="?attr/selectableItemBackground"-->
+<!--                android:gravity="center_vertical"-->
+<!--                android:orientation="horizontal"-->
+<!--                android:paddingStart="16dp"-->
+<!--                android:paddingEnd="12dp">-->
 
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="Copia de seguridad"
-                        android:src="@drawable/ic_cloud_upload"
-                        app:tint="#CBD5E1" />
+<!--                <FrameLayout-->
+<!--                    android:layout_width="42dp"-->
+<!--                    android:layout_height="42dp"-->
+<!--                    android:background="@drawable/bg_ajustes_icon_box">-->
 
-                </FrameLayout>
+<!--                    <ImageView-->
+<!--                        android:layout_width="24dp"-->
+<!--                        android:layout_height="24dp"-->
+<!--                        android:layout_gravity="center"-->
+<!--                        android:contentDescription="Copia de seguridad"-->
+<!--                        android:src="@drawable/ic_cloud_upload"-->
+<!--                        app:tint="#CBD5E1" />-->
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="Copia de seguridad"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+<!--                </FrameLayout>-->
 
-                <FrameLayout
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_ajustes_icon_box">
+<!--                <TextView-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_marginStart="16dp"-->
+<!--                    android:layout_weight="1"-->
+<!--                    android:ellipsize="end"-->
+<!--                    android:maxLines="1"-->
+<!--                    android:text="Copia de seguridad"-->
+<!--                    android:textColor="@android:color/white"-->
+<!--                    android:textSize="16sp"-->
+<!--                    android:textStyle="bold" />-->
 
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="Abrir"
-                        android:src="@drawable/ic_chevron_right"
-                        app:tint="#CBD5E1" />
+<!--                <FrameLayout-->
+<!--                    android:layout_width="40dp"-->
+<!--                    android:layout_height="40dp"-->
+<!--                    android:background="@drawable/bg_ajustes_icon_box">-->
 
-                </FrameLayout>
+<!--                    <ImageView-->
+<!--                        android:layout_width="24dp"-->
+<!--                        android:layout_height="24dp"-->
+<!--                        android:layout_gravity="center"-->
+<!--                        android:contentDescription="Abrir"-->
+<!--                        android:src="@drawable/ic_chevron_right"-->
+<!--                        app:tint="#CBD5E1" />-->
 
-            </LinearLayout>
+<!--                </FrameLayout>-->
 
-            <LinearLayout
-                android:id="@+id/rowOpcion2"
-                android:layout_width="match_parent"
-                android:layout_height="72dp"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/bg_ajustes_item"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="12dp">
-
-                <FrameLayout
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:background="@drawable/bg_ajustes_icon_box">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="Ajustes"
-                        android:src="@drawable/ic_settings"
-                        app:tint="#CBD5E1" />
-
-                </FrameLayout>
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:text="Opción 2"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <FrameLayout
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_ajustes_icon_box">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="Abrir"
-                        android:src="@drawable/ic_chevron_right"
-                        app:tint="#CBD5E1" />
-
-                </FrameLayout>
-
-            </LinearLayout>
+<!--            </LinearLayout>-->
 
             <LinearLayout
-                android:id="@+id/rowOpcion3"
+                android:id="@+id/rowOrganizarAlmacenamiento"
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
                 android:layout_marginBottom="12dp"
@@ -256,7 +202,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/rowOpcion4"
+                android:id="@+id/rowCancionesOcultas"
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
                 android:layout_marginBottom="12dp"
@@ -312,7 +258,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/rowOpcion5"
+                android:id="@+id/rowReproduccionTemporal"
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
                 android:layout_marginBottom="12dp"
@@ -341,11 +287,12 @@
                 </FrameLayout>
 
                 <TextView
+                    android:id="@+id/tvReproduccionTemporalTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:layout_weight="1"
-                    android:text="Opción 5"
+                    android:text="Reproducción temporal"
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -367,8 +314,9 @@
 
             </LinearLayout>
 
+
             <LinearLayout
-                android:id="@+id/rowOpcion6"
+                android:id="@+id/rowContacto"
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
                 android:layout_marginBottom="12dp"
@@ -401,7 +349,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:layout_weight="1"
-                    android:text="Opción 6"
+                    android:text="Contacto"
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />

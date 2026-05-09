@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.funcionamiento;
+package es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

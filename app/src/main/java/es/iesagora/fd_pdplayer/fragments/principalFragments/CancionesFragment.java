@@ -26,7 +26,10 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import es.iesagora.fd_pdplayer.MainActivity;
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.CancionesRepository;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.CancionesOcultasRepository;
@@ -34,7 +37,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.FavoriteUploadRepository;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionesBinding;
-import es.iesagora.fd_pdplayer.funcionamiento.ReproductorApp;
+import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;
 import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
 import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
@@ -53,6 +56,8 @@ public class CancionesFragment extends Fragment {
     private List<Cancion> listaCancionesTodas = new ArrayList<>();
     private List<Cancion> listaCanciones = new ArrayList<>();
 
+    private ActivityResultLauncher<String> permisoAudioLauncher;
+
     private static final int ORDEN_MAS_NUEVO = 0;
     private static final int ORDEN_MAS_ANTIGUO = 1;
     private static final int ORDEN_A_Z = 2;
@@ -64,6 +69,29 @@ public class CancionesFragment extends Fragment {
 
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
+
+    private final ExecutorService executorCanciones = Executors.newSingleThreadExecutor();
+    private int versionCarga = 0;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        permisoAudioLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (isGranted) {
+                        cargarCanciones();
+                    } else {
+                        Toast.makeText(
+                                requireContext(),
+                                "Permiso denegado, no se pueden mostrar canciones",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                }
+        );
+    }
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -85,21 +113,6 @@ public class CancionesFragment extends Fragment {
             listasActuales = listas != null ? listas : new ArrayList<>();
         });
 
-        ActivityResultLauncher<String> permisoAudioLauncher = registerForActivityResult(
-                new ActivityResultContracts.RequestPermission(),
-                isGranted -> {
-                    if (isGranted) {
-                        cargarCanciones();
-                    } else {
-                        Toast.makeText(
-                                requireContext(),
-                                "Permiso denegado, no se pueden mostrar canciones",
-                                Toast.LENGTH_SHORT
-                        ).show();
-                    }
-                }
-        );
-
         adapter = new CancionesAdapter(requireContext(), new ArrayList<>(), new CancionesAdapter.Listener() {
             @Override
             public void onOpcionesCancion(View anchor, Cancion cancion) {
@@ -119,7 +132,26 @@ public class CancionesFragment extends Fragment {
 
         configurarBuscador();
 
+        esperarPermisoNotificacionesYComprobarAudio();
+    }
+
+    private void esperarPermisoNotificacionesYComprobarAudio() {
+        if (!isAdded() || binding == null) return;
+
+        if (requireActivity() instanceof MainActivity) {
+            ((MainActivity) requireActivity()).ejecutarCuandoPermisosInicialesTerminen(
+                    this::comprobarPermisoAudioYCargar
+            );
+        } else {
+            comprobarPermisoAudioYCargar();
+        }
+    }
+
+    private void comprobarPermisoAudioYCargar() {
+        if (binding == null || !isAdded()) return;
+
         String permiso;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permiso = Manifest.permission.READ_MEDIA_AUDIO;
         } else {
@@ -192,13 +224,6 @@ public class CancionesFragment extends Fragment {
             posicion = 0;
         }
 
-        /*
-         * Esto hace el mismo efecto que pulsar la X del mini player:
-         * detiene cualquier reproducción activa.
-         *
-         * Después, al abrir CancionFragment, se inicia una reproducción nueva
-         * usando la lista general de canciones.
-         */
         ReproductorApp.getInstance().liberar();
 
         Bundle bundle = new Bundle();
@@ -242,12 +267,16 @@ public class CancionesFragment extends Fragment {
         favoriteUploadRepository.subirCancionAFavoritos(cancion, new FavoriteUploadRepository.SimpleCallback() {
             @Override
             public void onSuccess(String message) {
-                VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                if (binding != null) {
+                    VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                }
             }
 
             @Override
             public void onError(String message) {
-                VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                if (binding != null) {
+                    VentanasApp.mostrarMensaje(binding.getRoot(), message);
+                }
             }
         });
     }
@@ -320,23 +349,53 @@ public class CancionesFragment extends Fragment {
     }
 
     private void cargarCanciones() {
-        if (modoOrden == ORDEN_MAS_NUEVO) {
-            listaCancionesTodas = repository.getCancionesPorFecha(true);
-        } else if (modoOrden == ORDEN_MAS_ANTIGUO) {
-            listaCancionesTodas = repository.getCancionesPorFecha(false);
-        } else {
-            listaCancionesTodas = repository.getCancionesPorFecha(true);
-            ordenarAlfabeticamente(modoOrden == ORDEN_A_Z);
-        }
+        if (binding == null) return;
 
-        aplicarFiltroCanciones();
-        actualizarDescripcionOrden();
+        final int versionActual = ++versionCarga;
+
+        setCargandoCanciones(true);
+
+        executorCanciones.execute(() -> {
+            List<Cancion> cancionesCargadas;
+
+            if (modoOrden == ORDEN_MAS_NUEVO) {
+                cancionesCargadas = repository.getCancionesPorFecha(true);
+            } else if (modoOrden == ORDEN_MAS_ANTIGUO) {
+                cancionesCargadas = repository.getCancionesPorFecha(false);
+            } else {
+                cancionesCargadas = repository.getCancionesPorFecha(true);
+                ordenarListaAlfabeticamente(cancionesCargadas, modoOrden == ORDEN_A_Z);
+            }
+
+            if (!isAdded()) return;
+
+            requireActivity().runOnUiThread(() -> {
+                if (binding == null) return;
+                if (versionActual != versionCarga) return;
+
+                listaCancionesTodas = cancionesCargadas != null ? cancionesCargadas : new ArrayList<>();
+
+                aplicarFiltroCanciones();
+                actualizarDescripcionOrden();
+                setCargandoCanciones(false);
+            });
+        });
     }
 
-    private void ordenarAlfabeticamente(boolean ascendente) {
-        if (listaCancionesTodas == null) return;
+    private void setCargandoCanciones(boolean cargando) {
+        if (binding == null) return;
 
-        Collections.sort(listaCancionesTodas, (c1, c2) -> {
+        binding.btnRecargarCanciones.setEnabled(!cargando);
+        binding.btnSort.setEnabled(!cargando);
+
+        binding.btnRecargarCanciones.setAlpha(cargando ? 0.55f : 1f);
+        binding.btnSort.setAlpha(cargando ? 0.55f : 1f);
+    }
+
+    private void ordenarListaAlfabeticamente(List<Cancion> canciones, boolean ascendente) {
+        if (canciones == null) return;
+
+        Collections.sort(canciones, (c1, c2) -> {
             int resultado = safe(c1.getNombre()).compareToIgnoreCase(safe(c2.getNombre()));
 
             if (resultado == 0) {
@@ -450,10 +509,22 @@ public class CancionesFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
 
+        versionCarga++;
+
         if (searchRunnable != null) {
             searchHandler.removeCallbacks(searchRunnable);
         }
 
+        if (adapter != null) {
+            adapter.liberar();
+        }
+
         binding = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        executorCanciones.shutdownNow();
     }
 }

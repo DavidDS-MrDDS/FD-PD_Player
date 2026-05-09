@@ -136,7 +136,6 @@ public class BusquedaFragment extends Fragment {
             }
         });
 
-        cargarFavoritosPublicos();
     }
 
     private void cargarFavoritosPublicos() {
@@ -405,5 +404,14 @@ public class BusquedaFragment extends Fragment {
         }
 
         binding = null;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if (binding != null) {
+            cargarFavoritosPublicos();
+        }
     }
 }

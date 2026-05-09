@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 import java.util.ArrayList;
 
@@ -19,7 +20,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.CancionEnListaEn
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaCanciones;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.databinding.FragmentListaBinding;
-import es.iesagora.fd_pdplayer.funcionamiento.ReproductorApp;
+import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;
 import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
 import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesEnListaAdapter;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
@@ -59,6 +60,7 @@ public class ListaFragment extends Fragment {
             }
         });
 
+        binding.recyclerViewCancionesLista.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.recyclerViewCancionesLista.setAdapter(adapter);
 
         viewModel.obtenerListaConCanciones(listaId).observe(getViewLifecycleOwner(), this::pintarLista);
@@ -90,6 +92,11 @@ public class ListaFragment extends Fragment {
     }
 
     private void abrirCancionDeLista(Cancion cancion) {
+        if (cancion == null) {
+            Toast.makeText(requireContext(), "No se encontró la canción", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (cancionesActuales == null || cancionesActuales.isEmpty()) {
             Toast.makeText(requireContext(), "Esta lista no tiene canciones", Toast.LENGTH_SHORT).show();
             return;
@@ -98,18 +105,38 @@ public class ListaFragment extends Fragment {
         int posicion = cancionesActuales.indexOf(cancion);
 
         if (posicion < 0) {
+            posicion = buscarPosicionPorRuta(cancion.getRutaArchivo());
+        }
+
+        if (posicion < 0) {
             posicion = 0;
         }
 
         ReproductorApp.getInstance().liberar();
 
         Bundle bundle = new Bundle();
-        bundle.putSerializable("cancion", cancion);
+        bundle.putSerializable("cancion", cancionesActuales.get(posicion));
         bundle.putSerializable("listaCanciones", new ArrayList<>(cancionesActuales));
         bundle.putInt("posicion", posicion);
 
         NavHostFragment.findNavController(this)
                 .navigate(R.id.action_listaFragment_to_cancionEnListaFragment, bundle);
+    }
+
+    private int buscarPosicionPorRuta(String rutaArchivo) {
+        if (rutaArchivo == null || cancionesActuales == null) {
+            return -1;
+        }
+
+        for (int i = 0; i < cancionesActuales.size(); i++) {
+            Cancion c = cancionesActuales.get(i);
+
+            if (c != null && rutaArchivo.equals(c.getRutaArchivo())) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private void confirmarQuitarCancion(Cancion cancion) {

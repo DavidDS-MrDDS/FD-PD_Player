@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.funcionamiento;
+package es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano;
 
 import android.Manifest;
 import android.app.NotificationChannel;
@@ -15,6 +15,7 @@ import android.graphics.RectF;
 import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.text.TextUtils;
+import android.util.LruCache;
 import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
@@ -22,6 +23,8 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import es.iesagora.fd_pdplayer.MainActivity;
 import es.iesagora.fd_pdplayer.R;
@@ -40,13 +43,30 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
     private final Context context;
     private final NotificationManagerCompat notificationManager;
 
+    private final ExecutorService imagenExecutor = Executors.newSingleThreadExecutor();
+    private final LruCache<String, Bitmap> imagenCache;
+
     private String ultimaRuta = "";
     private boolean ultimoEstadoReproduciendo = false;
     private long ultimaActualizacionProgreso = 0;
 
+    private String rutaImagenCargando = "";
+    private int versionCargaImagen = 0;
+
     public ReproductorNotificacion(Context context) {
         this.context = context.getApplicationContext();
         this.notificationManager = NotificationManagerCompat.from(this.context);
+
+        int memoriaMaximaKb = (int) (Runtime.getRuntime().maxMemory() / 1024);
+        int tamanoCacheKb = memoriaMaximaKb / 24;
+
+        imagenCache = new LruCache<String, Bitmap>(tamanoCacheKb) {
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                return value.getByteCount() / 1024;
+            }
+        };
+
         crearCanal();
     }
 
@@ -85,6 +105,8 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         if (cancionActual == null) {
             cancelar();
             ultimaRuta = "";
+            rutaImagenCargando = "";
+            versionCargaImagen++;
             return;
         }
 
@@ -170,13 +192,10 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
 
         views.setTextViewText(R.id.tvNotifArtista, artista);
 
-        Bitmap imagen = obtenerImagenDesdeArchivo(cancion.getRutaArchivo());
+        Bitmap imagen = obtenerImagenCacheada(cancion, preparada, reproduciendo, progresoMs, duracionMs);
 
         if (imagen != null) {
-            views.setImageViewBitmap(
-                    R.id.ivNotifImagen,
-                    crearBitmapRedondeado(imagen, dp(12))
-            );
+            views.setImageViewBitmap(R.id.ivNotifImagen, imagen);
         } else {
             views.setImageViewResource(R.id.ivNotifImagen, R.drawable.imagenotfound);
         }
@@ -230,6 +249,79 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         return views;
     }
 
+    private Bitmap obtenerImagenCacheada(Cancion cancion,
+                                         boolean preparada,
+                                         boolean reproduciendo,
+                                         int progresoMs,
+                                         int duracionMs) {
+        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
+            return null;
+        }
+
+        String ruta = safe(cancion.getRutaArchivo());
+
+        Bitmap cacheada = imagenCache.get(ruta);
+
+        if (cacheada != null) {
+            return cacheada;
+        }
+
+        cargarImagenNotificacionAsync(
+                cancion,
+                preparada,
+                reproduciendo,
+                progresoMs,
+                duracionMs
+        );
+
+        return null;
+    }
+
+    private void cargarImagenNotificacionAsync(Cancion cancion,
+                                               boolean preparada,
+                                               boolean reproduciendo,
+                                               int progresoMs,
+                                               int duracionMs) {
+        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
+            return;
+        }
+
+        String ruta = safe(cancion.getRutaArchivo());
+
+        if (ruta.equals(rutaImagenCargando)) {
+            return;
+        }
+
+        rutaImagenCargando = ruta;
+        final int versionActual = ++versionCargaImagen;
+
+        imagenExecutor.execute(() -> {
+            Bitmap bitmap = obtenerImagenDesdeArchivoRedondeada(ruta);
+
+            if (bitmap != null) {
+                imagenCache.put(ruta, bitmap);
+            }
+
+            rutaImagenCargando = "";
+
+            if (versionActual != versionCargaImagen) {
+                return;
+            }
+
+            if (!ruta.equals(ultimaRuta)) {
+                return;
+            }
+
+            mostrarActualizar(
+                    cancion,
+                    preparada,
+                    reproduciendo,
+                    progresoMs,
+                    duracionMs
+            );
+        });
+    }
+
     private PendingIntent crearPendingIntentAccion(String action, int requestCode) {
         Intent intent = new Intent(context, ReproductorNotificacionReceiver.class);
         intent.setAction(action);
@@ -270,6 +362,12 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         notificationManager.cancel(NOTIFICATION_ID);
     }
 
+    public void liberar() {
+        cancelar();
+        imagenExecutor.shutdownNow();
+        imagenCache.evictAll();
+    }
+
     private boolean tienePermisoNotificaciones() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             return true;
@@ -281,7 +379,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         ) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private Bitmap obtenerImagenDesdeArchivo(String ruta) {
+    private Bitmap obtenerImagenDesdeArchivoRedondeada(String ruta) {
         if (TextUtils.isEmpty(ruta)) return null;
 
         MediaMetadataRetriever mmr = null;
@@ -292,19 +390,55 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
 
             byte[] art = mmr.getEmbeddedPicture();
 
-            if (art != null) {
-                return BitmapFactory.decodeByteArray(art, 0, art.length);
+            if (art == null) {
+                return null;
             }
 
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(art, 0, art.length, bounds);
+
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = calcularInSampleSize(bounds, dp(96), dp(96));
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
+
+            Bitmap bitmap = BitmapFactory.decodeByteArray(art, 0, art.length, options);
+
+            if (bitmap == null) {
+                return null;
+            }
+
+            return crearBitmapRedondeado(bitmap, dp(12));
+
         } catch (Exception ignored) {
+            return null;
+
         } finally {
             try {
-                if (mmr != null) mmr.release();
+                if (mmr != null) {
+                    mmr.release();
+                }
             } catch (Exception ignored) {
             }
         }
+    }
 
-        return null;
+    private int calcularInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        int height = options.outHeight;
+        int width = options.outWidth;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+            int halfHeight = height / 2;
+            int halfWidth = width / 2;
+
+            while ((halfHeight / inSampleSize) >= reqHeight
+                    && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+
+        return Math.max(1, inSampleSize);
     }
 
     private Bitmap crearBitmapRedondeado(Bitmap bitmap, float radio) {

@@ -7,6 +7,7 @@ import android.media.MediaMetadataRetriever;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.LruCache;
 import android.view.View;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -17,10 +18,12 @@ import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import es.iesagora.fd_pdplayer.databinding.ActivityMainBinding;
-import es.iesagora.fd_pdplayer.funcionamiento.ReproductorApp;
-import es.iesagora.fd_pdplayer.funcionamiento.ReproductorNotificacion;
+import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;
+import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorNotificacion;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class MainActivity extends AppCompatActivity implements ReproductorApp.Listener {
@@ -37,11 +40,19 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
 
     private ActivityResultLauncher<String> permisoNotificacionesLauncher;
 
+    private boolean permisosInicialesTerminados = false;
+    private final ArrayList<Runnable> callbacksPermisosIniciales = new ArrayList<>();
+
+    private final ExecutorService miniImagenExecutor = Executors.newSingleThreadExecutor();
+    private LruCache<String, Bitmap> miniImagenCache;
+    private int versionCargaImagenMini = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView((binding = ActivityMainBinding.inflate(getLayoutInflater())).getRoot());
 
+        inicializarCacheImagenes();
         prepararPermisoNotificaciones();
 
         setSupportActionBar(binding.toolbar);
@@ -71,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
             reproductorApp.liberar();
             miniCancionActual = null;
             rutaMiniPintada = null;
+            versionCargaImagenMini++;
 
             if (reproductorNotificacion != null) {
                 reproductorNotificacion.cancelar();
@@ -94,16 +106,30 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
         }
     }
 
+    private void inicializarCacheImagenes() {
+        int memoriaMaximaKb = (int) (Runtime.getRuntime().maxMemory() / 1024);
+        int tamanoCacheKb = memoriaMaximaKb / 16;
+
+        miniImagenCache = new LruCache<String, Bitmap>(tamanoCacheKb) {
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                return value.getByteCount() / 1024;
+            }
+        };
+    }
+
     private void prepararPermisoNotificaciones() {
         permisoNotificacionesLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
-                isGranted -> {
-                }
+                isGranted -> marcarPermisosInicialesTerminados()
         );
     }
 
     private void pedirPermisoNotificacionesSiHaceFalta() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            marcarPermisosInicialesTerminados();
+            return;
+        }
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -111,7 +137,34 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
         ) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
 
             permisoNotificacionesLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+
+        } else {
+            marcarPermisosInicialesTerminados();
         }
+    }
+
+    public void ejecutarCuandoPermisosInicialesTerminen(Runnable callback) {
+        if (callback == null) return;
+
+        if (permisosInicialesTerminados) {
+            callback.run();
+        } else {
+            callbacksPermisosIniciales.add(callback);
+        }
+    }
+
+    private void marcarPermisosInicialesTerminados() {
+        if (permisosInicialesTerminados) return;
+
+        permisosInicialesTerminados = true;
+
+        for (Runnable callback : callbacksPermisosIniciales) {
+            if (callback != null) {
+                callback.run();
+            }
+        }
+
+        callbacksPermisosIniciales.clear();
     }
 
     private void abrirReproductorActual() {
@@ -158,6 +211,7 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
 
         if (cancionActual == null) {
             rutaMiniPintada = null;
+            versionCargaImagenMini++;
             actualizarVisibilidadMiniPlayer();
             return;
         }
@@ -172,16 +226,11 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
 
         binding.tvMiniPlayerArtista.setText(artista);
 
-        if (!safe(cancionActual.getRutaArchivo()).equals(rutaMiniPintada)) {
-            rutaMiniPintada = safe(cancionActual.getRutaArchivo());
+        String rutaActual = safe(cancionActual.getRutaArchivo());
 
-            Bitmap bitmap = obtenerImagenDesdeArchivo(rutaMiniPintada);
-
-            if (bitmap != null) {
-                binding.ivMiniPlayerImagen.setImageBitmap(bitmap);
-            } else {
-                binding.ivMiniPlayerImagen.setImageResource(R.drawable.imagenotfound);
-            }
+        if (!rutaActual.equals(rutaMiniPintada)) {
+            rutaMiniPintada = rutaActual;
+            cargarImagenMiniPlayer(rutaActual);
         }
 
         binding.btnMiniPlayPause.setImageResource(
@@ -189,6 +238,50 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
         );
 
         actualizarVisibilidadMiniPlayer();
+    }
+
+    private void cargarImagenMiniPlayer(String ruta) {
+        if (binding == null) return;
+
+        final int versionActual = ++versionCargaImagenMini;
+
+        if (TextUtils.isEmpty(ruta)) {
+            binding.ivMiniPlayerImagen.setImageResource(R.drawable.imagenotfound);
+            return;
+        }
+
+        Bitmap cacheada = miniImagenCache.get(ruta);
+
+        if (cacheada != null) {
+            binding.ivMiniPlayerImagen.setImageBitmap(cacheada);
+            return;
+        }
+
+        binding.ivMiniPlayerImagen.setImageResource(R.drawable.imagenotfound);
+
+        miniImagenExecutor.execute(() -> {
+            Bitmap bitmap = obtenerImagenDesdeArchivoReducida(
+                    ruta,
+                    dp(72),
+                    dp(72)
+            );
+
+            if (bitmap != null) {
+                miniImagenCache.put(ruta, bitmap);
+            }
+
+            runOnUiThread(() -> {
+                if (binding == null) return;
+                if (versionActual != versionCargaImagenMini) return;
+                if (!ruta.equals(rutaMiniPintada)) return;
+
+                if (bitmap != null) {
+                    binding.ivMiniPlayerImagen.setImageBitmap(bitmap);
+                } else {
+                    binding.ivMiniPlayerImagen.setImageResource(R.drawable.imagenotfound);
+                }
+            });
+        });
     }
 
     private void actualizarVisibilidadMiniPlayer() {
@@ -209,7 +302,7 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
         );
     }
 
-    private Bitmap obtenerImagenDesdeArchivo(String ruta) {
+    private Bitmap obtenerImagenDesdeArchivoReducida(String ruta, int anchoDeseado, int altoDeseado) {
         if (TextUtils.isEmpty(ruta)) return null;
 
         MediaMetadataRetriever mmr = null;
@@ -220,19 +313,54 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
 
             byte[] art = mmr.getEmbeddedPicture();
 
-            if (art != null) {
-                return BitmapFactory.decodeByteArray(art, 0, art.length);
+            if (art == null) {
+                return null;
             }
 
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(art, 0, art.length, bounds);
+
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = calcularInSampleSize(bounds, anchoDeseado, altoDeseado);
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
+
+            return BitmapFactory.decodeByteArray(art, 0, art.length, options);
+
         } catch (Exception ignored) {
+            return null;
+
         } finally {
             try {
-                if (mmr != null) mmr.release();
+                if (mmr != null) {
+                    mmr.release();
+                }
             } catch (Exception ignored) {
             }
         }
+    }
 
-        return null;
+    private int calcularInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        int height = options.outHeight;
+        int width = options.outWidth;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+            int halfHeight = height / 2;
+            int halfWidth = width / 2;
+
+            while ((halfHeight / inSampleSize) >= reqHeight
+                    && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+
+        return Math.max(1, inSampleSize);
+    }
+
+    private int dp(int value) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(value * density);
     }
 
     private String safe(String value) {
@@ -261,6 +389,18 @@ public class MainActivity extends AppCompatActivity implements ReproductorApp.Li
                 reproductorNotificacion.cancelar();
             }
         }
+
+        if (reproductorNotificacion != null) {
+            reproductorNotificacion.liberar();
+        }
+
+        miniImagenExecutor.shutdownNow();
+
+        if (miniImagenCache != null) {
+            miniImagenCache.evictAll();
+        }
+
+        callbacksPermisosIniciales.clear();
 
         binding = null;
     }
