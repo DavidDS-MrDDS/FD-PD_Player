@@ -14,7 +14,7 @@
         android:paddingStart="14dp"
         android:paddingTop="18dp"
         android:paddingEnd="14dp"
-        android:paddingBottom="110dp">
+        android:paddingBottom="170dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardFavoritos"

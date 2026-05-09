@@ -3,10 +3,8 @@ package es.iesagora.fd_pdplayer.fragments.internalFragments.itemFragments;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
-import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,15 +17,14 @@ import androidx.fragment.app.Fragment;
 
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Random;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionEnListaBinding;
+import es.iesagora.fd_pdplayer.funcionamiento.ReproductorApp;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
-public class CancionEnListaFragment extends Fragment {
+public class CancionEnListaFragment extends Fragment implements ReproductorApp.Listener {
 
     private FragmentCancionEnListaBinding binding;
 
@@ -35,37 +32,10 @@ public class CancionEnListaFragment extends Fragment {
     private ArrayList<Cancion> listaCanciones = new ArrayList<>();
     private int posicion = 0;
 
-    private MediaPlayer mediaPlayer;
-    private boolean preparada = false;
+    private final ReproductorApp reproductorApp = ReproductorApp.getInstance();
 
-    private static final int MODO_NORMAL = 0;
-    private static final int MODO_REPETIR_UNA = 1;
-    private static final int MODO_MIXTA = 2;
-
-    private int modoReproduccion = MODO_NORMAL;
-    private final Random random = new Random();
-
-    private final Handler handler = new Handler(Looper.getMainLooper());
-
-    private final Runnable actualizador = new Runnable() {
-        @Override
-        public void run() {
-            if (mediaPlayer == null || !preparada || binding == null) return;
-
-            int pos = mediaPlayer.getCurrentPosition();
-            int dur = mediaPlayer.getDuration();
-
-            binding.seekBarProgreso.setMax(dur);
-            binding.seekBarProgreso.setProgress(pos);
-
-            binding.tvTiempoActual.setText(formatearTiempo(pos));
-            binding.tvTiempoFinal.setText(formatearTiempo(dur));
-
-            if (mediaPlayer.isPlaying()) {
-                handler.postDelayed(this, 500);
-            }
-        }
-    };
+    private String rutaPintada;
+    private boolean usuarioMoviendoSeekBar = false;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -79,17 +49,37 @@ public class CancionEnListaFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         recogerDatos();
-        pintarCancion();
+
+        if (cancion == null) {
+            Toast.makeText(requireContext(), "No se encontró la canción", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         prepararControles();
-        actualizarBotonModoReproduccion();
-        prepararReproductor();
+
+        reproductorApp.addListener(this);
+
+        /*
+         * IMPORTANTE:
+         * El último parámetro está en true.
+         * Eso indica que esta reproducción viene desde una lista,
+         * por lo que siguiente/anterior funcionarán con las canciones de esa lista
+         * y el miniplayer volverá a CancionEnListaFragment.
+         */
+        reproductorApp.reproducir(
+                requireContext(),
+                cancion,
+                listaCanciones,
+                posicion,
+                true
+        );
     }
 
     private void recogerDatos() {
         if (getArguments() == null) return;
 
-        cancion = (Cancion) getArguments().getSerializable("cancion");
-        listaCanciones = (ArrayList<Cancion>) getArguments().getSerializable("listaCanciones");
+        cancion = obtenerCancionArgumento(getArguments(), "cancion");
+        listaCanciones = obtenerListaCancionesArgumento(getArguments(), "listaCanciones");
         posicion = getArguments().getInt("posicion", 0);
 
         if (listaCanciones == null) {
@@ -110,15 +100,87 @@ public class CancionEnListaFragment extends Fragment {
         }
     }
 
-    private void pintarCancion() {
-        if (cancion == null) return;
+    private void prepararControles() {
+        binding.btnPlayPause.setOnClickListener(v -> reproductorApp.toggle());
 
-        binding.tvNombreCancion.setText(cancion.getNombre());
+        binding.btnSiguiente.setOnClickListener(v -> reproductorApp.irSiguiente());
+
+        binding.btnAnterior.setOnClickListener(v -> reproductorApp.irAnterior());
+
+        binding.btnModoReproduccion.setOnClickListener(v -> reproductorApp.cambiarModoReproduccion());
+
+        binding.seekBarProgreso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                usuarioMoviendoSeekBar = true;
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                usuarioMoviendoSeekBar = false;
+                reproductorApp.seekTo(seekBar.getProgress());
+            }
+        });
+    }
+
+    @Override
+    public void onReproductorActualizado(Cancion cancionActual,
+                                         ArrayList<Cancion> listaActual,
+                                         int posicionLista,
+                                         boolean preparada,
+                                         boolean reproduciendo,
+                                         int progresoMs,
+                                         int duracionMs,
+                                         int modoReproduccion,
+                                         boolean modoLista) {
+        if (binding == null || cancionActual == null) return;
+
+        this.cancion = cancionActual;
+        this.listaCanciones = listaActual != null ? listaActual : new ArrayList<>();
+        this.posicion = posicionLista;
+
+        if (!safe(cancionActual.getRutaArchivo()).equals(rutaPintada)) {
+            pintarCancion(cancionActual);
+        }
+
+        binding.btnPlayPause.setIconResource(
+                reproduciendo ? R.drawable.ic_player_pause : R.drawable.ic_player_play
+        );
+
+        if (preparada) {
+            binding.seekBarProgreso.setMax(Math.max(duracionMs, 1));
+
+            if (!usuarioMoviendoSeekBar) {
+                binding.seekBarProgreso.setProgress(Math.max(progresoMs, 0));
+            }
+
+            binding.tvTiempoActual.setText(formatearTiempo(progresoMs));
+            binding.tvTiempoFinal.setText(formatearTiempo(duracionMs));
+        } else {
+            binding.seekBarProgreso.setProgress(0);
+            binding.tvTiempoActual.setText("0:00");
+            binding.tvTiempoFinal.setText("--:--");
+        }
+
+        actualizarBotonModoReproduccion(modoReproduccion);
+    }
+
+    private void pintarCancion(Cancion cancion) {
+        if (binding == null || cancion == null) return;
+
+        rutaPintada = safe(cancion.getRutaArchivo());
+
+        binding.tvNombreCancion.setText(safe(cancion.getNombre()));
 
         String album = safe(cancion.getAlbum());
         String artista = safe(cancion.getArtista());
 
         String sub;
+
         if (!TextUtils.isEmpty(album) && !TextUtils.isEmpty(artista)) {
             sub = album + " • " + artista;
         } else if (!TextUtils.isEmpty(album)) {
@@ -129,147 +191,23 @@ public class CancionEnListaFragment extends Fragment {
 
         binding.tvSubCancion.setText(sub);
 
-        Bitmap bmp = obtenerCaratulaDesdeArchivo(cancion.getRutaArchivo());
-        if (bmp != null) binding.ivCaratula.setImageBitmap(bmp);
-        else binding.ivCaratula.setImageResource(R.drawable.imagenotfound);
+        Bitmap bmp = obtenerImagenDesdeArchivo(cancion.getRutaArchivo());
 
-        binding.btnPlayPause.setIconResource(R.drawable.ic_player_play);
-        binding.seekBarProgreso.setProgress(0);
-        binding.tvTiempoActual.setText("0:00");
-        binding.tvTiempoFinal.setText("--:--");
-    }
-
-    private void prepararControles() {
-        binding.btnPlayPause.setOnClickListener(v -> toggle());
-
-        binding.btnSiguiente.setOnClickListener(v -> irSiguiente());
-        binding.btnAnterior.setOnClickListener(v -> irAnterior());
-
-        binding.btnModoReproduccion.setOnClickListener(v -> cambiarModoReproduccion());
-
-        binding.seekBarProgreso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {}
-
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {
-                if (mediaPlayer != null) {
-                    mediaPlayer.seekTo(seekBar.getProgress());
-                }
-            }
-        });
-    }
-
-    private void prepararReproductor() {
-        liberar();
-
-        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
-            Toast.makeText(requireContext(), "No se encontró la canción", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        mediaPlayer = new MediaPlayer();
-
-        try {
-            mediaPlayer.setDataSource(cancion.getRutaArchivo());
-
-            mediaPlayer.setOnPreparedListener(mp -> {
-                preparada = true;
-                binding.tvTiempoFinal.setText(formatearTiempo(mp.getDuration()));
-                mp.start();
-                binding.btnPlayPause.setIconResource(R.drawable.ic_player_pause);
-                handler.post(actualizador);
-            });
-
-            mediaPlayer.setOnCompletionListener(mp -> alTerminarCancion());
-
-            mediaPlayer.prepareAsync();
-
-        } catch (IOException e) {
-            Toast.makeText(requireContext(), "Error", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void toggle() {
-        if (mediaPlayer == null || !preparada) return;
-
-        if (mediaPlayer.isPlaying()) {
-            mediaPlayer.pause();
-            binding.btnPlayPause.setIconResource(R.drawable.ic_player_play);
+        if (bmp != null) {
+            binding.ivCaratula.setImageBitmap(bmp);
         } else {
-            mediaPlayer.start();
-            binding.btnPlayPause.setIconResource(R.drawable.ic_player_pause);
-            handler.post(actualizador);
+            binding.ivCaratula.setImageResource(R.drawable.imagenotfound);
         }
     }
 
-    private void irSiguiente() {
-        if (listaCanciones == null || listaCanciones.isEmpty()) return;
-
-        if (modoReproduccion == MODO_MIXTA) {
-            posicion = obtenerPosicionAleatoria();
-        } else {
-            posicion++;
-            if (posicion >= listaCanciones.size()) posicion = 0;
-        }
-
-        cambiarCancion();
-    }
-
-    private void irAnterior() {
-        if (listaCanciones == null || listaCanciones.isEmpty()) return;
-
-        if (modoReproduccion == MODO_MIXTA) {
-            posicion = obtenerPosicionAleatoria();
-        } else {
-            posicion--;
-            if (posicion < 0) posicion = listaCanciones.size() - 1;
-        }
-
-        cambiarCancion();
-    }
-
-    private void cambiarCancion() {
-        if (listaCanciones == null || listaCanciones.isEmpty()) return;
-        if (posicion < 0 || posicion >= listaCanciones.size()) posicion = 0;
-
-        cancion = listaCanciones.get(posicion);
-        pintarCancion();
-        prepararReproductor();
-    }
-
-    private void alTerminarCancion() {
-        if (modoReproduccion == MODO_REPETIR_UNA) {
-            if (mediaPlayer != null) {
-                mediaPlayer.seekTo(0);
-                mediaPlayer.start();
-                binding.btnPlayPause.setIconResource(R.drawable.ic_player_pause);
-                handler.post(actualizador);
-            }
-            return;
-        }
-
-        irSiguiente();
-    }
-
-    private void cambiarModoReproduccion() {
-        modoReproduccion++;
-
-        if (modoReproduccion > MODO_MIXTA) {
-            modoReproduccion = MODO_NORMAL;
-        }
-
-        actualizarBotonModoReproduccion();
-    }
-
-    private void actualizarBotonModoReproduccion() {
+    private void actualizarBotonModoReproduccion(int modoReproduccion) {
         if (binding == null) return;
 
-        if (modoReproduccion == MODO_NORMAL) {
+        if (modoReproduccion == ReproductorApp.MODO_NORMAL) {
             binding.btnModoReproduccion.setImageResource(R.drawable.ic_repeat);
             binding.btnModoReproduccion.setColorFilter(0xFFCCC8C5);
             binding.btnModoReproduccion.setContentDescription("Reproducción normal");
-        } else if (modoReproduccion == MODO_REPETIR_UNA) {
+        } else if (modoReproduccion == ReproductorApp.MODO_REPETIR_UNA) {
             binding.btnModoReproduccion.setImageResource(R.drawable.ic_repeat_one);
             binding.btnModoReproduccion.setColorFilter(0xFFE3E0F2);
             binding.btnModoReproduccion.setContentDescription("Repetir canción");
@@ -280,57 +218,79 @@ public class CancionEnListaFragment extends Fragment {
         }
     }
 
-    private int obtenerPosicionAleatoria() {
-        if (listaCanciones == null || listaCanciones.isEmpty()) return 0;
+    private Bitmap obtenerImagenDesdeArchivo(String ruta) {
+        if (TextUtils.isEmpty(ruta)) return null;
 
-        if (listaCanciones.size() == 1) {
-            return 0;
-        }
+        MediaMetadataRetriever mmr = null;
 
-        int nuevaPosicion;
-        do {
-            nuevaPosicion = random.nextInt(listaCanciones.size());
-        } while (nuevaPosicion == posicion);
-
-        return nuevaPosicion;
-    }
-
-    private Bitmap obtenerCaratulaDesdeArchivo(String ruta) {
         try {
-            MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            mmr = new MediaMetadataRetriever();
             mmr.setDataSource(ruta);
+
             byte[] art = mmr.getEmbeddedPicture();
-            mmr.release();
 
             if (art != null) {
                 return BitmapFactory.decodeByteArray(art, 0, art.length);
             }
-        } catch (Exception ignored) {}
+
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                if (mmr != null) {
+                    mmr.release();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
         return null;
     }
 
     private String formatearTiempo(int ms) {
-        int s = ms / 1000;
+        int s = Math.max(0, ms / 1000);
         return (s / 60) + ":" + String.format("%02d", s % 60);
-    }
-
-    private void liberar() {
-        handler.removeCallbacks(actualizador);
-        if (mediaPlayer != null) {
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
-        preparada = false;
     }
 
     private String safe(String value) {
         return value == null ? "" : value;
     }
 
+    @SuppressWarnings("deprecation")
+    private Cancion obtenerCancionArgumento(Bundle args, String key) {
+        if (args == null) return null;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return args.getSerializable(key, Cancion.class);
+        } else {
+            return (Cancion) args.getSerializable(key);
+        }
+    }
+
+    @SuppressWarnings({"deprecation", "unchecked"})
+    private ArrayList<Cancion> obtenerListaCancionesArgumento(Bundle args, String key) {
+        if (args == null) {
+            return new ArrayList<>();
+        }
+
+        Object valor;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            valor = args.getSerializable(key, ArrayList.class);
+        } else {
+            valor = args.getSerializable(key);
+        }
+
+        if (valor instanceof ArrayList<?>) {
+            return (ArrayList<Cancion>) valor;
+        }
+
+        return new ArrayList<>();
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        liberar();
+        reproductorApp.removeListener(this);
         binding = null;
     }
 }

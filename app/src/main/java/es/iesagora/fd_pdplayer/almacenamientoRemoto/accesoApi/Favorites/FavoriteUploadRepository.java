@@ -122,7 +122,7 @@ public class FavoriteUploadRepository {
                                               @NonNull UploadSuccess onSuccess,
                                               @NonNull UploadError onError) {
 
-        RequestBody audioBody = RequestBody.create(MediaType.parse("audio/mpeg"), file);
+        RequestBody audioBody = RequestBody.create(file, MediaType.parse("audio/mpeg"));
 
         apiService.uploadFileToSupabase(
                 signedUrl,

@@ -49,6 +49,10 @@
 
         </activity>
 
+        <receiver
+            android:name=".funcionamiento.ReproductorNotificacionReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

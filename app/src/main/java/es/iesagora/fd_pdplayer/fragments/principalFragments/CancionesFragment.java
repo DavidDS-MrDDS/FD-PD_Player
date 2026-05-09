@@ -34,6 +34,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.FavoriteUploadRepository;
 import es.iesagora.fd_pdplayer.databinding.FragmentCancionesBinding;
+import es.iesagora.fd_pdplayer.funcionamiento.ReproductorApp;
 import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
 import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesAdapter;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
@@ -180,7 +181,25 @@ public class CancionesFragment extends Fragment {
     }
 
     private void abrirCancion(Cancion cancion) {
+        if (listaCanciones == null || listaCanciones.isEmpty()) {
+            Toast.makeText(requireContext(), "No hay canciones disponibles", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         int posicion = listaCanciones.indexOf(cancion);
+
+        if (posicion < 0) {
+            posicion = 0;
+        }
+
+        /*
+         * Esto hace el mismo efecto que pulsar la X del mini player:
+         * detiene cualquier reproducción activa.
+         *
+         * Después, al abrir CancionFragment, se inicia una reproducción nueva
+         * usando la lista general de canciones.
+         */
+        ReproductorApp.getInstance().liberar();
 
         Bundle bundle = new Bundle();
         bundle.putSerializable("cancion", cancion);

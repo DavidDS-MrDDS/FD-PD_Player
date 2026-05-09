@@ -15,12 +15,13 @@ import androidx.navigation.fragment.NavHostFragment;
 import java.util.ArrayList;
 
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
-import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesEnListaAdapter;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.CancionEnListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaCanciones;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.databinding.FragmentListaBinding;
+import es.iesagora.fd_pdplayer.funcionamiento.ReproductorApp;
+import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.adapters.CancionesEnListaAdapter;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class ListaFragment extends Fragment {
@@ -99,6 +100,8 @@ public class ListaFragment extends Fragment {
         if (posicion < 0) {
             posicion = 0;
         }
+
+        ReproductorApp.getInstance().liberar();
 
         Bundle bundle = new Bundle();
         bundle.putSerializable("cancion", cancion);

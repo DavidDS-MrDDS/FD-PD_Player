@@ -157,7 +157,7 @@ public class ModificarCancionFragment extends Fragment {
 
     private void recogerDatos() {
         if (getArguments() == null) return;
-        cancion = (Cancion) getArguments().getSerializable("cancion");
+        cancion = obtenerCancionArgumento(getArguments(), "cancion");
     }
 
     private void pintarDatos() {
@@ -1065,6 +1065,17 @@ public class ModificarCancionFragment extends Fragment {
             this.artista = artista;
             this.album = album;
             this.reintentarBorradoAndroid10 = reintentarBorradoAndroid10;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private Cancion obtenerCancionArgumento(Bundle args, String key) {
+        if (args == null) return null;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return args.getSerializable(key, Cancion.class);
+        } else {
+            return (Cancion) args.getSerializable(key);
         }
     }
 
