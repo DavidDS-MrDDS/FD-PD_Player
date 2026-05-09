@@ -35,6 +35,8 @@ import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
+import org.jaudiotagger.tag.images.Artwork;
+import org.jaudiotagger.tag.images.ArtworkFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -62,8 +64,11 @@ public class ModificarCancionFragment extends Fragment {
 
     private ActivityResultLauncher<IntentSenderRequest> deleteRequestLauncher;
     private ActivityResultLauncher<String> permisoEscrituraLauncher;
+    private ActivityResultLauncher<String> seleccionarImagenLauncher;
 
     private ModificacionPendiente modificacionPendiente;
+
+    private File imagenSeleccionadaTemporal;
 
     private String nombrePendiente;
     private String artistaPendiente;
@@ -104,6 +109,34 @@ public class ModificarCancionFragment extends Fragment {
                     }
                 }
         );
+
+        seleccionarImagenLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (!isAdded() || binding == null || uri == null) return;
+
+                    try {
+                        imagenSeleccionadaTemporal = crearImagenTemporalDesdeUri(uri);
+
+                        if (imagenSeleccionadaTemporal == null || !imagenSeleccionadaTemporal.exists()) {
+                            VentanasApp.mostrarMensaje(binding.getRoot(), "No se pudo cargar la imagen");
+                            return;
+                        }
+
+                        Bitmap bitmap = BitmapFactory.decodeFile(imagenSeleccionadaTemporal.getAbsolutePath());
+
+                        if (bitmap != null) {
+                            binding.ivImagenEditar.setImageBitmap(bitmap);
+                            VentanasApp.mostrarMensaje(binding.getRoot(), "Imagen seleccionada");
+                        } else {
+                            VentanasApp.mostrarMensaje(binding.getRoot(), "Imagen no válida");
+                        }
+
+                    } catch (Exception e) {
+                        VentanasApp.mostrarMensaje(binding.getRoot(), "Error al seleccionar imagen");
+                    }
+                }
+        );
     }
 
     @Override
@@ -117,8 +150,8 @@ public class ModificarCancionFragment extends Fragment {
 
         binding.btnGuardarCambios.setOnClickListener(v -> guardarCambios());
 
-        binding.btnCambiarCaratula.setOnClickListener(v ->
-                VentanasApp.mostrarMensaje(binding.getRoot(), "Cambio de carátula pendiente")
+        binding.btnCambiarImagen.setOnClickListener(v ->
+                seleccionarImagenLauncher.launch("image/*")
         );
     }
 
@@ -138,12 +171,12 @@ public class ModificarCancionFragment extends Fragment {
         binding.etAlbumCancion.setText(safe(cancion.getAlbum()));
         binding.tvRutaCancion.setText(safe(cancion.getRutaArchivo()));
 
-        Bitmap caratula = obtenerCaratulaDesdeArchivo(cancion.getRutaArchivo());
+        Bitmap imagen = obtenerImagenDesdeArchivo(cancion.getRutaArchivo());
 
-        if (caratula != null) {
-            binding.ivCaratulaEditar.setImageBitmap(caratula);
+        if (imagen != null) {
+            binding.ivImagenEditar.setImageBitmap(imagen);
         } else {
-            binding.ivCaratulaEditar.setImageResource(R.drawable.imagenotfound);
+            binding.ivImagenEditar.setImageResource(R.drawable.imagenotfound);
         }
     }
 
@@ -229,7 +262,8 @@ public class ModificarCancionFragment extends Fragment {
                         archivoOriginal,
                         nuevoNombre,
                         nuevoArtista,
-                        nuevoAlbum
+                        nuevoAlbum,
+                        imagenSeleccionadaTemporal
                 );
 
                 if (archivoTemporal == null || !archivoTemporal.exists()) {
@@ -305,7 +339,8 @@ public class ModificarCancionFragment extends Fragment {
                                              File archivoOriginal,
                                              String nuevoNombre,
                                              String nuevoArtista,
-                                             String nuevoAlbum) throws Exception {
+                                             String nuevoAlbum,
+                                             File nuevaImagen) throws Exception {
         String extension = obtenerExtension(archivoOriginal.getName());
 
         File temporal = new File(
@@ -318,7 +353,7 @@ public class ModificarCancionFragment extends Fragment {
             copiarStreams(inputStream, outputStream);
         }
 
-        escribirMetadatos(temporal, nuevoNombre, nuevoArtista, nuevoAlbum);
+        escribirMetadatos(temporal, nuevoNombre, nuevoArtista, nuevoAlbum, nuevaImagen);
 
         return temporal;
     }
@@ -326,13 +361,24 @@ public class ModificarCancionFragment extends Fragment {
     private void escribirMetadatos(File archivo,
                                    String nuevoNombre,
                                    String nuevoArtista,
-                                   String nuevoAlbum) throws Exception {
+                                   String nuevoAlbum,
+                                   File nuevaImagen) throws Exception {
         AudioFile audioFile = AudioFileIO.read(archivo);
         Tag tag = audioFile.getTagOrCreateAndSetDefault();
 
         tag.setField(FieldKey.TITLE, nuevoNombre);
         tag.setField(FieldKey.ARTIST, nuevoArtista);
         tag.setField(FieldKey.ALBUM, nuevoAlbum);
+
+        if (nuevaImagen != null && nuevaImagen.exists()) {
+            try {
+                tag.deleteArtworkField();
+            } catch (Exception ignored) {
+            }
+
+            Artwork artwork = ArtworkFactory.createArtworkFromFile(nuevaImagen);
+            tag.setField(artwork);
+        }
 
         audioFile.commit();
     }
@@ -855,6 +901,29 @@ public class ModificarCancionFragment extends Fragment {
         return destino;
     }
 
+    private File crearImagenTemporalDesdeUri(Uri uri) throws Exception {
+        File archivoImagen = new File(
+                requireContext().getCacheDir(),
+                "imagen_cancion_" + System.currentTimeMillis() + ".jpg"
+        );
+
+        Bitmap bitmap;
+
+        try (InputStream inputStream = requireContext().getContentResolver().openInputStream(uri)) {
+            bitmap = BitmapFactory.decodeStream(inputStream);
+        }
+
+        if (bitmap == null) {
+            return null;
+        }
+
+        try (OutputStream outputStream = new FileOutputStream(archivoImagen)) {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream);
+        }
+
+        return archivoImagen;
+    }
+
     private void copiarStreams(InputStream inputStream, OutputStream outputStream) throws Exception {
         byte[] buffer = new byte[8192];
         int leido;
@@ -875,7 +944,7 @@ public class ModificarCancionFragment extends Fragment {
         );
     }
 
-    private Bitmap obtenerCaratulaDesdeArchivo(String ruta) {
+    private Bitmap obtenerImagenDesdeArchivo(String ruta) {
         try {
             MediaMetadataRetriever mmr = new MediaMetadataRetriever();
             mmr.setDataSource(ruta);
@@ -946,6 +1015,7 @@ public class ModificarCancionFragment extends Fragment {
         if (binding == null) return;
 
         binding.btnGuardarCambios.setEnabled(!cargando);
+        binding.btnCambiarImagen.setEnabled(!cargando);
 
         if (cargando) {
             binding.btnGuardarCambios.setText("Guardando...");
@@ -1007,6 +1077,11 @@ public class ModificarCancionFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        if (imagenSeleccionadaTemporal != null && imagenSeleccionadaTemporal.exists()) {
+            imagenSeleccionadaTemporal.delete();
+        }
+
         executor.shutdown();
     }
 }

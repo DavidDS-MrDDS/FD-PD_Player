@@ -79,7 +79,6 @@ public class PrincipalFragment extends Fragment {
                     tab.setCustomView(custom);
                 }).attach();
 
-        // aplica estado inicial + listener
         binding.tabLayout.addOnTabSelectedListener(new com.google.android.material.tabs.TabLayout.OnTabSelectedListener() {
             @Override public void onTabSelected(com.google.android.material.tabs.TabLayout.Tab tab) {
                 actualizarTab(tab, true);
@@ -90,7 +89,6 @@ public class PrincipalFragment extends Fragment {
             @Override public void onTabReselected(com.google.android.material.tabs.TabLayout.Tab tab) {}
         });
 
-        // fuerza estilo correcto para la primera tab
         TabLayout.Tab first = binding.tabLayout.getTabAt(0);
         if (first != null) actualizarTab(first, true);
     }
