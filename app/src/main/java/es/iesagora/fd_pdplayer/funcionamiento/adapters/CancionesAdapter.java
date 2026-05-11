@@ -42,7 +42,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
     private final LruCache<String, Bitmap> cacheCaratulas;
     private final Set<String> rutasCargando = ConcurrentHashMap.newKeySet();
 
-    private String rutaCancionReproduciendo = null;
 
     public CancionesAdapter(Context context, ArrayList<Cancion> canciones, Listener listener) {
         this.canciones = canciones != null ? canciones : new ArrayList<>();
@@ -153,11 +152,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
 
     public void establecerLista(List<Cancion> canciones) {
         this.canciones = canciones != null ? canciones : new ArrayList<>();
-        notifyDataSetChanged();
-    }
-
-    public void setCancionReproduciendo(String rutaArchivo) {
-        this.rutaCancionReproduciendo = rutaArchivo;
         notifyDataSetChanged();
     }
 

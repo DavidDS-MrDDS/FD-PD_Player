@@ -39,11 +39,9 @@ public class ReproductorApp {
     private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
     private final Random random = new Random();
 
-    private Context appContext;
 
     private MediaPlayer mediaPlayer;
     private boolean preparada = false;
-    private boolean preparando = false;
 
     private Cancion cancionActual;
     private ArrayList<Cancion> listaCanciones = new ArrayList<>();
@@ -96,7 +94,6 @@ public class ReproductorApp {
                            boolean reproducirComoLista) {
         if (context == null || nuevaCancion == null) return;
 
-        appContext = context.getApplicationContext();
 
         ArrayList<Cancion> listaPreparada = nuevaLista != null
                 ? new ArrayList<>(nuevaLista)
@@ -142,13 +139,11 @@ public class ReproductorApp {
 
         if (cancionActual == null || TextUtils.isEmpty(cancionActual.getRutaArchivo())) {
             preparada = false;
-            preparando = false;
             notificar();
             return;
         }
 
         preparada = false;
-        preparando = true;
         notificar();
 
         MediaPlayer nuevoPlayer = new MediaPlayer();
@@ -161,7 +156,6 @@ public class ReproductorApp {
                 if (mediaPlayer != mp) return;
 
                 preparada = true;
-                preparando = false;
 
                 mp.start();
                 notificar();
@@ -175,7 +169,6 @@ public class ReproductorApp {
         } catch (IOException | IllegalStateException e) {
             liberarMediaPlayer(false);
             preparada = false;
-            preparando = false;
             notificar();
         }
     }
@@ -327,7 +320,6 @@ public class ReproductorApp {
         }
 
         preparada = false;
-        preparando = false;
 
         if (limpiarCancion) {
             cancionActual = null;

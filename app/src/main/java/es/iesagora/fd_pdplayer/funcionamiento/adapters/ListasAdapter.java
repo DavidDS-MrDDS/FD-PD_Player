@@ -22,13 +22,11 @@ public class ListasAdapter extends RecyclerView.Adapter<ListasAdapter.ListaViewH
         void onPedirBorrar(ListaEntity lista);
     }
 
-    private final Context context;
     private final LayoutInflater inflater;
     private final Listener listener;
     private List<ListaEntity> listas = new ArrayList<>();
 
     public ListasAdapter(Context context, Listener listener) {
-        this.context = context;
         this.listener = listener;
         this.inflater = LayoutInflater.from(context);
     }

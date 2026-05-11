@@ -20,9 +20,6 @@ public interface FavoritosDao {
     @Query("SELECT * FROM favoritos_local ORDER BY sincronizado DESC, createdAt DESC, nombre ASC")
     LiveData<List<FavoritoLocalEntity>> getAllLive();
 
-    @Query("DELETE FROM favoritos_local")
-    void deleteAll();
-
     @Query("DELETE FROM favoritos_local WHERE songKey = :songKey")
     void deleteBySongKey(String songKey);
 

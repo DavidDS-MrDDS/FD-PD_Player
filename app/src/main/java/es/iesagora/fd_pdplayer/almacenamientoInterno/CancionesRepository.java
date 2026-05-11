@@ -7,7 +7,6 @@ import android.provider.MediaStore;
 import android.text.TextUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -24,10 +23,6 @@ public class CancionesRepository {
     public CancionesRepository(Context context) {
         this.context = context.getApplicationContext();
         cancionesOcultasRepository = new CancionesOcultasRepository(context);
-    }
-
-    public List<Cancion> getCanciones() {
-        return obtenerCancionesDelSistema(MediaStore.Audio.Media.TITLE + " ASC");
     }
 
     public List<Cancion> getCancionesPorFecha(boolean masNuevasPrimero) {
@@ -255,20 +250,6 @@ public class CancionesRepository {
         }
 
         return texto;
-    }
-
-    private boolean tituloPareceNombreDeArchivo(String titulo) {
-        if (TextUtils.isEmpty(titulo)) {
-            return false;
-        }
-
-        String lower = titulo.toLowerCase();
-
-        return lower.endsWith(".mp3")
-                || lower.endsWith(".m4a")
-                || lower.endsWith(".wav")
-                || lower.endsWith(".ogg")
-                || lower.endsWith(".flac");
     }
 
     private String limpiarTituloVisible(String titulo) {

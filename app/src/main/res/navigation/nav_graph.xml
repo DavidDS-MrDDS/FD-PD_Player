@@ -5,26 +5,12 @@
     android:id="@+id/nav_graph"
     app:startDestination="@id/principalFragment">
 
-    <!-- Fragmento principal -->
+    <!-- Principal -->
     <fragment
         android:id="@+id/principalFragment"
         android:name="es.iesagora.fd_pdplayer.fragments.PrincipalFragment"
         android:label="FD-PD Player"
-        tools:layout="@layout/fragment_principal">
-
-        <action
-            android:id="@+id/action_principalFragment_to_listaFragment"
-            app:destination="@id/listaFragment" />
-
-        <action
-            android:id="@+id/action_principalFragment_to_cancionFragment"
-            app:destination="@id/cancionFragment" />
-
-        <action
-            android:id="@+id/action_principalFragment_to_favoritosFragment"
-            app:destination="@id/favoritosFragment" />
-
-    </fragment>
+        tools:layout="@layout/fragment_principal" />
 
     <!-- Listas y favoritos -->
     <fragment
@@ -102,7 +88,6 @@
         tools:layout="@layout/fragment_contacto" />
 
     <!-- Otros -->
-
     <fragment
         android:id="@+id/modificarCancionFragment"
         android:name="es.iesagora.fd_pdplayer.fragments.internalFragments.otherFragments.ModificarCancionFragment"
