@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.ViewholderCancionBinding;
@@ -29,7 +30,6 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
 
     public interface Listener {
         void onOpcionesCancion(View anchor, Cancion cancion);
-
         void onClickCancion(Cancion cancion);
     }
 
@@ -42,6 +42,7 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
     private final LruCache<String, Bitmap> cacheCaratulas;
     private final Set<String> rutasCargando = ConcurrentHashMap.newKeySet();
 
+    private boolean liberado = false;
 
     public CancionesAdapter(Context context, ArrayList<Cancion> canciones, Listener listener) {
         this.canciones = canciones != null ? canciones : new ArrayList<>();
@@ -59,51 +60,58 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
 
     @Override
     public void onBindViewHolder(@NonNull CancionViewHolder holder, int position) {
+        if (liberado || canciones == null || position < 0 || position >= canciones.size()) {
+            return;
+        }
+
         Cancion cancion = canciones.get(position);
 
         holder.binding.tvNombre.setText(safe(cancion.getNombre()));
-
-        String album = safe(cancion.getAlbum());
-        String artista = safe(cancion.getArtista());
-
-        String sub;
-
-        if (!TextUtils.isEmpty(album) && !TextUtils.isEmpty(artista)) {
-            sub = album + " • " + artista;
-        } else if (!TextUtils.isEmpty(album)) {
-            sub = album;
-        } else if (!TextUtils.isEmpty(artista)) {
-            sub = artista;
-        } else {
-            sub = "<unknown>";
-        }
-
-        holder.binding.tvSub.setText(sub);
+        holder.binding.tvSub.setText(crearSubtitulo(cancion));
 
         cargarCaratula(holder, cancion);
 
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
+            if (!liberado && listener != null) {
                 listener.onClickCancion(cancion);
             }
         });
 
         holder.binding.btnOpciones.setOnClickListener(v -> {
-            if (listener != null) {
+            if (!liberado && listener != null) {
                 listener.onOpcionesCancion(v, cancion);
             }
         });
     }
 
+    private String crearSubtitulo(Cancion cancion) {
+        String album = safe(cancion.getAlbum());
+        String artista = safe(cancion.getArtista());
+
+        if (!TextUtils.isEmpty(album) && !TextUtils.isEmpty(artista)) {
+            return album + " • " + artista;
+        }
+
+        if (!TextUtils.isEmpty(album)) {
+            return album;
+        }
+
+        if (!TextUtils.isEmpty(artista)) {
+            return artista;
+        }
+
+        return "<unknown>";
+    }
+
     private void cargarCaratula(@NonNull CancionViewHolder holder, Cancion cancion) {
+        if (liberado || cancion == null) return;
+
         String ruta = safe(cancion.getRutaArchivo());
 
         holder.binding.ivIcono.setTag(ruta);
         holder.binding.ivIcono.setImageResource(R.drawable.imagenotfound);
 
-        if (TextUtils.isEmpty(ruta)) {
-            return;
-        }
+        if (TextUtils.isEmpty(ruta)) return;
 
         Bitmap bitmapCache = cacheCaratulas.get(ruta);
 
@@ -112,37 +120,46 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
             return;
         }
 
-        if (rutasCargando.contains(ruta)) {
-            return;
-        }
+        if (rutasCargando.contains(ruta)) return;
 
         rutasCargando.add(ruta);
 
-        executorCaratulas.execute(() -> {
-            Bitmap bitmap = ImagenCancionUtils.obtenerImagenDesdeArchivoReducida(
-                    ruta,
-                    160,
-                    160
-            );
-
-            if (bitmap != null) {
-                cacheCaratulas.put(ruta, bitmap);
-            }
-
-            rutasCargando.remove(ruta);
-
-            mainHandler.post(() -> {
-                Object tagActual = holder.binding.ivIcono.getTag();
-
-                if (tagActual != null && tagActual.equals(ruta)) {
-                    if (bitmap != null) {
-                        holder.binding.ivIcono.setImageBitmap(bitmap);
-                    } else {
-                        holder.binding.ivIcono.setImageResource(R.drawable.imagenotfound);
-                    }
+        try {
+            executorCaratulas.execute(() -> {
+                if (liberado) {
+                    rutasCargando.remove(ruta);
+                    return;
                 }
+
+                Bitmap bitmap = ImagenCancionUtils.obtenerImagenDesdeArchivoReducida(
+                        ruta,
+                        160,
+                        160
+                );
+
+                if (bitmap != null && !liberado) {
+                    cacheCaratulas.put(ruta, bitmap);
+                }
+
+                rutasCargando.remove(ruta);
+
+                mainHandler.post(() -> {
+                    if (liberado) return;
+
+                    Object tagActual = holder.binding.ivIcono.getTag();
+
+                    if (tagActual != null && tagActual.equals(ruta)) {
+                        if (bitmap != null) {
+                            holder.binding.ivIcono.setImageBitmap(bitmap);
+                        } else {
+                            holder.binding.ivIcono.setImageResource(R.drawable.imagenotfound);
+                        }
+                    }
+                });
             });
-        });
+        } catch (RejectedExecutionException e) {
+            rutasCargando.remove(ruta);
+        }
     }
 
     @Override
@@ -151,14 +168,21 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
     }
 
     public void establecerLista(List<Cancion> canciones) {
+        if (liberado) return;
+
         this.canciones = canciones != null ? canciones : new ArrayList<>();
         notifyDataSetChanged();
     }
 
     public void liberar() {
+        liberado = true;
+
+        mainHandler.removeCallbacksAndMessages(null);
         executorCaratulas.shutdownNow();
+
         cacheCaratulas.evictAll();
         rutasCargando.clear();
+        canciones = new ArrayList<>();
     }
 
     private String safe(String s) {

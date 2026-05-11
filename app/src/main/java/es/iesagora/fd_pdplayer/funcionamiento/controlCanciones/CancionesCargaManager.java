@@ -91,6 +91,7 @@ public class CancionesCargaManager {
 
     public void liberar() {
         versionCarga++;
+        mainHandler.removeCallbacksAndMessages(null);
 
         if (executor != null) {
             executor.shutdownNow();

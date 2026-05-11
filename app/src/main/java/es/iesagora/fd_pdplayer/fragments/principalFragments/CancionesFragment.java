@@ -175,17 +175,13 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
         setCargandoCanciones(true);
 
         cargaManager.cargar(modoOrden, canciones -> {
-            if (!isAdded()) return;
+            if (!isAdded() || binding == null) return;
 
-            requireActivity().runOnUiThread(() -> {
-                if (binding == null) return;
+            listaCancionesTodas = canciones != null ? canciones : new ArrayList<>();
 
-                listaCancionesTodas = canciones != null ? canciones : new ArrayList<>();
-
-                aplicarFiltroCanciones();
-                actualizarDescripcionOrden();
-                setCargandoCanciones(false);
-            });
+            aplicarFiltroCanciones();
+            actualizarDescripcionOrden();
+            setCargandoCanciones(false);
         });
     }
 
