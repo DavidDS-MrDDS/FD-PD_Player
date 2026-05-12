@@ -39,14 +39,22 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
 
     private FragmentCancionesBinding binding;
 
-    private CancionesAdapter adapter;
-    private OptimizarBuscador optimizarBuscador;
+    // Se ocupa de cargar las canciones.
     private CancionesCargaManager cargaManager;
-    private CancionesAccionesManager accionesManager;
 
+    private CancionesAdapter adapter;
+    // Lista sin filtros.
     private List<Cancion> listaCancionesTodas = new ArrayList<>();
+    // Lista con filtros.
     private List<Cancion> listaCanciones = new ArrayList<>();
 
+    // Ralentiza un poco el buscador para no sobre ejecutar el filtro.
+    private OptimizarBuscador optimizarBuscador;
+
+    // Se ocupa de abrir canciones y sus opciones.
+    private CancionesAccionesManager accionesManager;
+
+    // Pide el permiso de audio o almacenamiento según la versión de Android.
     private ActivityResultLauncher<String> permisoAudioLauncher;
 
     private int modoOrden = CancionesUtils.ORDEN_MAS_NUEVO;
@@ -57,6 +65,7 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
 
         cargaManager = new CancionesCargaManager(requireContext());
 
+        // Se ejecuta después de pedir el permiso de audio/almacenamiento.
         permisoAudioLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
                 isGranted -> {
@@ -92,12 +101,11 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
         configurarBotones();
         configurarBuscador();
 
-        esperarPermisoNotificacionesYComprobarAudio();
+        esperarPermisoNotificacionesYComprobarAlmacenamiento();
     }
 
     private void inicializarAcciones() {
         ListasViewModel listasViewModel = new ViewModelProvider(requireActivity()).get(ListasViewModel.class);
-
         accionesManager = new CancionesAccionesManager(
                 this,
                 listasViewModel,
@@ -120,6 +128,7 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
     }
 
     private void actualizarListas(List<ListaEntity> listas) {
+        // Informa sobre las listas para poder añadir canciones a estas.
         if (accionesManager != null) {
             accionesManager.setListasActuales(listas);
         }
@@ -127,13 +136,15 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
 
     private void configurarRecycler() {
         adapter = new CancionesAdapter(requireContext(), new ArrayList<>(), this);
-
         binding.recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 1));
         binding.recyclerView.setAdapter(adapter);
     }
 
     private void configurarBotones() {
+        // Abre el menú usando VentanasApp.
         binding.btnSort.setOnClickListener(v -> mostrarMenuOrdenCanciones());
+
+        // Vuelve a cargar canciones.
         binding.btnRecargarCanciones.setOnClickListener(v -> cargarCanciones());
     }
 
@@ -142,10 +153,11 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
         binding.etBuscadorCanciones.addTextChangedListener(optimizarBuscador);
     }
 
-    private void esperarPermisoNotificacionesYComprobarAudio() {
+    private void esperarPermisoNotificacionesYComprobarAlmacenamiento() {
         if (!isAdded() || binding == null) return;
 
         if (requireActivity() instanceof MainActivity) {
+            // MainActivity informa cuando el "Popup" del permiso de notificaciones ya no está.
             ((MainActivity) requireActivity()).ejecutarCuandoPermisosInicialesTerminen(
                     this::comprobarPermisoAudioYCargar
             );
@@ -157,6 +169,8 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
     private void comprobarPermisoAudioYCargar() {
         if (!isAdded() || binding == null) return;
 
+        // En Android 13+ se pide permiso de audio,
+        // en versiones anteriores se pide permiso de lectura de almacenamiento.
         String permiso = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 ? Manifest.permission.READ_MEDIA_AUDIO
                 : Manifest.permission.READ_EXTERNAL_STORAGE;
@@ -174,6 +188,7 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
 
         setCargandoCanciones(true);
 
+        // CancionesCargaManager carga canciones en segundo plano y devuelve el resultado aquí.
         cargaManager.cargar(modoOrden, canciones -> {
             if (!isAdded() || binding == null) return;
 
@@ -189,15 +204,13 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
         if (binding == null || adapter == null) return;
 
         String busqueda = obtenerTextoBuscador();
-
+        // CancionesUtils filtra la lista.
         listaCanciones = CancionesUtils.filtrar(listaCancionesTodas, busqueda);
 
         adapter.establecerLista(listaCanciones);
-
         if (accionesManager != null) {
             accionesManager.setCanciones(listaCancionesTodas, listaCanciones);
         }
-
         pintarEstadoLista(busqueda);
     }
 
@@ -226,6 +239,7 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
     private void mostrarMenuOrdenCanciones() {
         if (!isAdded() || binding == null) return;
 
+        // VentanasApp muestra el menú.
         VentanasApp.mostrarMenu(
                 requireContext(),
                 "OrdenCanciones",
@@ -264,6 +278,7 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
 
     @Override
     public void onOpcionesCancion(View anchor, Cancion cancion) {
+        // CancionesAdapter llama aquí cuando se pulsa el botón de opciones de una canción.
         if (accionesManager != null) {
             accionesManager.mostrarMenuCancion(cancion);
         }
@@ -271,6 +286,7 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
 
     @Override
     public void onClickCancion(Cancion cancion) {
+        // CancionesAdapter llama aquí cuando se pulsa una canción.
         if (accionesManager != null) {
             accionesManager.abrirCancion(cancion);
         }
@@ -279,11 +295,10 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-
+        // Cancela cargas pendientes para evitar crasheos.
         if (cargaManager != null) {
             cargaManager.cancelarPendientes();
         }
-
         if (optimizarBuscador != null) {
             optimizarBuscador.cancelar();
 
@@ -293,12 +308,10 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
 
             optimizarBuscador = null;
         }
-
         if (adapter != null) {
             adapter.liberar();
             adapter = null;
         }
-
         accionesManager = null;
         binding = null;
     }
@@ -306,7 +319,6 @@ public class CancionesFragment extends Fragment implements CancionesAdapter.List
     @Override
     public void onDestroy() {
         super.onDestroy();
-
         if (cargaManager != null) {
             cargaManager.liberar();
             cargaManager = null;

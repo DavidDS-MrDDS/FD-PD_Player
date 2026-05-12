@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.funcionamiento;
+package es.iesagora.fd_pdplayer.funcionamiento.mainActivity;
 
 import android.Manifest;
 import android.os.Build;
@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 
-public class Permisos {
+public class PermisoNotificacion {
 
     private final AppCompatActivity activity;
 
@@ -21,7 +21,7 @@ public class Permisos {
 
     private final ArrayList<Runnable> callbacks = new ArrayList<>();
 
-    public Permisos(AppCompatActivity activity) {
+    public PermisoNotificacion(AppCompatActivity activity) {
         this.activity = activity;
         prepararPermisoNotificaciones();
     }
@@ -37,10 +37,10 @@ public class Permisos {
         if (iniciado || terminado) return;
 
         iniciado = true;
-        pedirPermisoNotificacionesSiHaceFalta();
+        PermisoNotificaciones();
     }
 
-    private void pedirPermisoNotificacionesSiHaceFalta() {
+    private void PermisoNotificaciones() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             marcarComoTerminado();
             return;
@@ -80,10 +80,6 @@ public class Permisos {
         }
 
         callbacks.clear();
-    }
-
-    public boolean haTerminado() {
-        return terminado;
     }
 
     public void liberar() {

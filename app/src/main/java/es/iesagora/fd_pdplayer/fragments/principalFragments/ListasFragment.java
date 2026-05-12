@@ -23,6 +23,7 @@ import es.iesagora.fd_pdplayer.databinding.FragmentListasBinding;
 public class ListasFragment extends Fragment {
 
     private FragmentListasBinding binding;
+
     private ListasAdapter adapter;
     private ListasViewModel viewModel;
 
@@ -38,7 +39,6 @@ public class ListasFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         viewModel = new ViewModelProvider(requireActivity()).get(ListasViewModel.class);
-
         adapter = new ListasAdapter(requireContext(), new ListasAdapter.Listener() {
             @Override
             public void onAbrir(ListaEntity lista) {
@@ -61,11 +61,13 @@ public class ListasFragment extends Fragment {
     }
 
     private void abrirFavoritos() {
+        // Navega al fragmento de favoritos.
         NavController navController = Navigation.findNavController(requireActivity(), R.id.nav_host_fragment);
         navController.navigate(R.id.favoritosFragment);
     }
 
     private void abrirLista(ListaEntity lista) {
+        // Envía el id de la lista al fragmento de detalle.
         Bundle b = new Bundle();
         b.putInt("listaId", lista.getId());
 
@@ -74,6 +76,7 @@ public class ListasFragment extends Fragment {
     }
 
     private void mostrarDialogCrearLista() {
+        // Llama a VentanasApp para mostrar el input.
         VentanasApp.mostrarInput(
                 requireContext(),
                 "CrearLista",
@@ -86,6 +89,7 @@ public class ListasFragment extends Fragment {
     }
 
     private void confirmarBorrado(ListaEntity lista) {
+        // Llama a VentanasApp para mostrar la confirmación de borrar la lista.
         VentanasApp.mostrarConfirmacion(
                 requireContext(),
                 "BorrarLista",
@@ -99,6 +103,7 @@ public class ListasFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+
         binding = null;
     }
 }

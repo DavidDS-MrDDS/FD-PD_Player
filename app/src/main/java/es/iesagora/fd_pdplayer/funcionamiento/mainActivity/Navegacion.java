@@ -1,4 +1,4 @@
-package es.iesagora.fd_pdplayer.funcionamiento;
+package es.iesagora.fd_pdplayer.funcionamiento.mainActivity;
 
 import android.view.View;
 
@@ -20,8 +20,8 @@ public class Navegacion {
     private NavController.OnDestinationChangedListener destinationChangedListener;
 
     public Navegacion(AppCompatActivity activity,
-                               ActivityMainBinding binding,
-                               Runnable onDestinoCambiado) {
+                      ActivityMainBinding binding,
+                      Runnable onDestinoCambiado) {
         this.activity = activity;
         this.binding = binding;
         this.onDestinoCambiado = onDestinoCambiado;
@@ -29,10 +29,14 @@ public class Navegacion {
 
     public void iniciar() {
         configurarToolbar();
-        configurarNavController();
+
+        if (!prepararNavController()) {
+            return;
+        }
+
         configurarBotonVolver();
-        escucharCambiosDeDestino();
-        actualizarEstadoInicial();
+        escucharCambiosPantalla();
+        actualizarPantallaActual();
     }
 
     private void configurarToolbar() {
@@ -43,64 +47,63 @@ public class Navegacion {
         }
     }
 
-    private void configurarNavController() {
+    private boolean prepararNavController() {
         NavHostFragment navHostFragment = (NavHostFragment) activity
                 .getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment);
 
-        if (navHostFragment != null) {
-            navController = navHostFragment.getNavController();
+        if (navHostFragment == null) {
+            return false;
         }
+
+        navController = navHostFragment.getNavController();
+        return true;
     }
 
     private void configurarBotonVolver() {
-        binding.btnBackToolbar.setImageResource(
-                androidx.appcompat.R.drawable.abc_ic_ab_back_material
-        );
-
+        binding.btnBackToolbar.setImageResource(R.drawable.ic_arrow);
         binding.btnBackToolbar.setOnClickListener(v -> navigateUp());
     }
 
-    private void escucharCambiosDeDestino() {
-        if (navController == null) return;
-
+    private void escucharCambiosPantalla() {
         destinationChangedListener = (controller, destination, arguments) -> {
             actualizarBotonVolver(destination);
-
-            if (onDestinoCambiado != null) {
-                onDestinoCambiado.run();
-            }
+            avisarCambioDestino();
         };
 
         navController.addOnDestinationChangedListener(destinationChangedListener);
     }
 
-    private void actualizarEstadoInicial() {
-        if (navController == null) return;
-
+    private void actualizarPantallaActual() {
         NavDestination destinoActual = navController.getCurrentDestination();
 
         if (destinoActual != null) {
             actualizarBotonVolver(destinoActual);
         }
 
+        avisarCambioDestino();
+    }
+
+    private void actualizarBotonVolver(NavDestination destination) {
+        if (destination.getId() == R.id.principalFragment) {
+            binding.btnBackToolbar.setVisibility(View.INVISIBLE);
+        } else {
+            binding.btnBackToolbar.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void avisarCambioDestino() {
         if (onDestinoCambiado != null) {
             onDestinoCambiado.run();
         }
     }
 
-    private void actualizarBotonVolver(NavDestination destination) {
-        if (destination == null) return;
-
-        boolean mostrarFlecha = destination.getId() != R.id.principalFragment;
-
-        binding.btnBackToolbar.setVisibility(
-                mostrarFlecha ? View.VISIBLE : View.INVISIBLE
-        );
-    }
-
     public boolean navigateUp() {
-        return navController != null && navController.navigateUp();
+        if (navController == null) {
+            return false;
+        }
+
+        return navController.navigateUp();
     }
 
     public NavController getNavController() {

@@ -24,8 +24,11 @@ import es.iesagora.fd_pdplayer.loginYRegistro.AuthActivity;
 public class AjustesFragment extends Fragment implements ReproductorTemporal.Listener {
 
     private FragmentAjustesBinding binding;
+
+    // ViewModel que permite saber si hay una sesión iniciada.
     private AuthViewModel authViewModel;
 
+    // Temporizador de reproducción de música.
     private final ReproductorTemporal reproductorTemporal = ReproductorTemporal.getInstance();
 
     private static final String TEXTO_REPRODUCCION_TEMPORAL = "Reproducción temporal";
@@ -102,6 +105,7 @@ public class AjustesFragment extends Fragment implements ReproductorTemporal.Lis
                 "60 minutos"
         };
 
+        // VentanasApp muestra el menú de opciones del temporizador.
         VentanasApp.mostrarMenu(
                 requireContext(),
                 "ReproduccionTemporal",
@@ -132,6 +136,7 @@ public class AjustesFragment extends Fragment implements ReproductorTemporal.Lis
     }
 
     private void activarTemporizador(int minutos) {
+        // Programa el apagado de la música usando ReproductorTemporal.
         reproductorTemporal.programarApagado(minutos);
 
         VentanasApp.mostrarMensaje(
@@ -144,6 +149,7 @@ public class AjustesFragment extends Fragment implements ReproductorTemporal.Lis
     public void onTemporizadorActualizado(boolean activo, String tiempoRestante) {
         if (binding == null) return;
 
+        // ReproductorTemporal actualiza el texto del botón.
         if (activo && tiempoRestante != null && !tiempoRestante.isEmpty()) {
             binding.tvReproduccionTemporalTitle.setText(
                     TEXTO_REPRODUCCION_TEMPORAL + " [" + tiempoRestante + "]"

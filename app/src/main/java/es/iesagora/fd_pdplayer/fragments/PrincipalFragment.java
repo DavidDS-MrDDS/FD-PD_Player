@@ -1,8 +1,6 @@
 package es.iesagora.fd_pdplayer.fragments;
 
-import android.graphics.Typeface;
 import android.os.Bundle;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -121,19 +119,16 @@ public class PrincipalFragment extends Fragment {
     private void actualizarTab(TabLayout.Tab tab, boolean selected) {
         View v = tab.getCustomView();
         if (v == null) return;
-
+        // Cambia el aspecto del "botón" de cambio de fragmento mientras está seleccionado
+        // y cuando deja de estarlo.
         TextView tv = v.findViewById(R.id.tabText);
 
         if (selected) {
             tv.setBackgroundResource(R.drawable.bg_segment_selected);
             tv.setTextColor(0xFFF2F0FF);
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         } else {
             tv.setBackgroundResource(R.drawable.bg_segment_unselected);
             tv.setTextColor(0xFFA8A6B7);
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            tv.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         }
     }
 
