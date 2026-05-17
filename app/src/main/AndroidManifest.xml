@@ -34,7 +34,7 @@
         android:theme="@style/Theme.FDPDPlayer">
 
         <activity
-            android:name=".loginYRegistro.AuthActivity"
+            android:name=".parteVisual.loginYRegistro.AuthActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 

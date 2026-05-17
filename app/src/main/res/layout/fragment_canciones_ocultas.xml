@@ -9,7 +9,7 @@
     android:paddingTop="16dp"
     android:paddingEnd="24dp"
     android:paddingBottom="12dp"
-    tools:context=".fragments.internalFragments.settingFragments.CancionesOcultasFragment">
+    tools:context=".parteVisual.fragments.internalFragments.settingFragments.CancionesOcultasFragment">
 
     <TextView
         android:id="@+id/tvCount"

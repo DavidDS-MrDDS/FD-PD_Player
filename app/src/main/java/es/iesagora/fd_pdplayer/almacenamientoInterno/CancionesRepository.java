@@ -109,7 +109,6 @@ public class CancionesRepository {
             String artistaReal = limpiarValor(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST));
             String albumReal = limpiarValor(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM));
 
-            // Prioritize real metadata from MediaMetadataRetriever
             if (!TextUtils.isEmpty(tituloReal)) {
                 titulo = tituloReal;
             }
@@ -121,7 +120,6 @@ public class CancionesRepository {
             }
 
         } catch (Exception ignored) {
-            // Log the exception if needed, but for now, continue with MediaStore/filename
         } finally {
             try {
                 mmr.release();
@@ -131,13 +129,11 @@ public class CancionesRepository {
 
         String nombreArchivoSinExtension = obtenerNombreArchivoSinExtension(rutaArchivo);
 
-        // --- Handle Title ---
         if (TextUtils.isEmpty(titulo)) {
             titulo = nombreArchivoSinExtension;
         }
-        titulo = limpiarTituloVisible(titulo); // Clean common suffixes like (Audio)
+        titulo = limpiarTituloVisible(titulo);
 
-        // Attempt to parse Artist - Title from the title field if it looks like it
         DatosDesdeNombre datosDesdeTitulo = intentarSepararArtistaYTitulo(titulo);
         if (datosDesdeTitulo != null) {
             if (TextUtils.isEmpty(artista) || artista.equalsIgnoreCase("<unknown>") || titulo.toLowerCase().startsWith(artista.toLowerCase() + " - ")) {
@@ -145,10 +141,8 @@ public class CancionesRepository {
             }
             titulo = datosDesdeTitulo.titulo;
         } else {
-            // If title itself didn't have "Artist - Title", try from the raw filename
             DatosDesdeNombre datosDesdeArchivo = intentarSepararArtistaYTitulo(limpiarTituloVisible(nombreArchivoSinExtension));
             if (datosDesdeArchivo != null) {
-                // Only update title if the current title is generic or starts with filename artist
                 boolean tituloEsGenericoOIncluyeArtistaArchivo = TextUtils.isEmpty(titulo)
                                                         || titulo.equalsIgnoreCase(nombreArchivoSinExtension)
                                                         || titulo.toLowerCase().startsWith(datosDesdeArchivo.artista.toLowerCase() + " - ");
@@ -160,23 +154,18 @@ public class CancionesRepository {
                 }
             }
         }
-        // Final fallback for title if still empty
         if (TextUtils.isEmpty(titulo)) {
             titulo = nombreArchivoSinExtension;
         }
 
 
-        // --- Handle Artist ---
         if (TextUtils.isEmpty(artista) || artista.equalsIgnoreCase("<unknown>")) {
             artista = "<unknown>";
         }
 
-        // --- Handle Album ---
-        // If the album is still empty after MediaMetadataRetriever, it should default to <unknown>
         if (TextUtils.isEmpty(album) || album.equalsIgnoreCase("<unknown>")) {
             album = "<unknown>";
         } else {
-            // Otherwise, check if the album appears to be just a generic filename or title copy
             if (albumPareceIncorrecto(album, titulo, artista, nombreArchivoSinExtension)) {
                 album = "<unknown>";
             }

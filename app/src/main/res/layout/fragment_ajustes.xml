@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#111425"
-    tools:context=".fragments.principalFragments.AjustesFragment">
+    tools:context=".parteVisual.fragments.principalFragments.AjustesFragment">
 
     <ScrollView
         android:id="@+id/scrollView"

@@ -56,10 +56,6 @@ public class FavoriteUploadRepository {
         favoritosLocalRepository = new FavoritosLocalRepository(application);
     }
 
-    public LiveData<Integer> getEstadoFavoritosLive() {
-        return estadoFavoritos;
-    }
-
     public void subirCancionAFavoritos(@NonNull Cancion cancion, @NonNull SimpleCallback callback) {
         SessionEntity session = sessionRepository.getSessionSync();
 
@@ -79,7 +75,7 @@ public class FavoriteUploadRepository {
 
         String token = "Bearer " + session.token;
 
-        apiService.getUploadUrl(token, songKey).enqueue(new Callback<UploadUrlResponse>() {
+        apiService.getUploadUrl(token, songKey).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<UploadUrlResponse> call,
                                    @NonNull Response<UploadUrlResponse> response) {
@@ -159,7 +155,7 @@ public class FavoriteUploadRepository {
                 safe(cancion.getNombre()),
                 safe(cancion.getArtista()),
                 safe(cancion.getAlbum())
-        ).enqueue(new Callback<AddFavoriteResponse>() {
+        ).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<AddFavoriteResponse> call,
                                    @NonNull Response<AddFavoriteResponse> response) {
@@ -208,7 +204,7 @@ public class FavoriteUploadRepository {
             return;
         }
 
-        apiService.deleteFavorite("Bearer " + session.token, songKey).enqueue(new Callback<MessageResponse>() {
+        apiService.deleteFavorite("Bearer " + session.token, songKey).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<MessageResponse> call,
                                    @NonNull Response<MessageResponse> response) {
@@ -234,20 +230,10 @@ public class FavoriteUploadRepository {
         });
     }
 
-    public void sincronizarFavoritosDelUsuario() {
-        SessionEntity session = sessionRepository.getSessionSync();
-
-        if (session == null || TextUtils.isEmpty(session.token)) {
-            return;
-        }
-
-        sincronizarFavoritosDelUsuario(session.token, session.username);
-    }
-
     public void sincronizarFavoritosDelUsuario(@NonNull String rawToken, @NonNull String fallbackUsername) {
         estadoFavoritos.postValue(ESTADO_FAVORITOS_CARGANDO);
 
-        apiService.getMyFavorites("Bearer " + rawToken).enqueue(new Callback<FavoriteListResponse>() {
+        apiService.getMyFavorites("Bearer " + rawToken).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<FavoriteListResponse> call,
                                    @NonNull Response<FavoriteListResponse> response) {

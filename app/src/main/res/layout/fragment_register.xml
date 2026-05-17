@@ -137,6 +137,38 @@
 
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:hint="Repite la contraseña"
+                        app:boxBackgroundColor="#292936"
+                        app:boxBackgroundMode="filled"
+                        app:boxCornerRadiusBottomEnd="16dp"
+                        app:boxCornerRadiusBottomStart="16dp"
+                        app:boxCornerRadiusTopEnd="16dp"
+                        app:boxCornerRadiusTopStart="16dp"
+                        app:boxStrokeColor="#C6C6C7"
+                        app:boxStrokeWidth="0dp"
+                        app:boxStrokeWidthFocused="1dp"
+                        app:endIconMode="password_toggle"
+                        app:endIconTint="#C4C7C9"
+                        app:hintTextColor="#C4C7C9">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/tVConfirmarContrasenia"
+                            android:layout_width="match_parent"
+                            android:layout_height="54dp"
+                            android:inputType="textPassword"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:singleLine="true"
+                            android:textColor="#E3E0F2"
+                            android:textColorHint="#8E9193"
+                            android:textSize="16sp" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnCrearCuenta"
                         android:layout_width="match_parent"

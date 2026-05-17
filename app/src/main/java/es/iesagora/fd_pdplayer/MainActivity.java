@@ -6,7 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
 
 import es.iesagora.fd_pdplayer.databinding.ActivityMainBinding;
-import es.iesagora.fd_pdplayer.funcionamiento.MiniPlayer;
+import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.MiniPlayer;
 import es.iesagora.fd_pdplayer.funcionamiento.mainActivity.PermisoNotificacion;
 import es.iesagora.fd_pdplayer.funcionamiento.mainActivity.Navegacion;
 import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;

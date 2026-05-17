@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/loginFragment"
-        android:name="es.iesagora.fd_pdplayer.loginYRegistro.fragmentos.LoginFragment"
+        android:name="es.iesagora.fd_pdplayer.parteVisual.loginYRegistro.fragments.LoginFragment"
         android:label="Login">
 
         <action
@@ -16,7 +16,7 @@
 
     <fragment
         android:id="@+id/registerFragment"
-        android:name="es.iesagora.fd_pdplayer.loginYRegistro.fragmentos.RegisterFragment"
+        android:name="es.iesagora.fd_pdplayer.parteVisual.loginYRegistro.fragments.RegisterFragment"
         android:label="Registro">
 
         <action

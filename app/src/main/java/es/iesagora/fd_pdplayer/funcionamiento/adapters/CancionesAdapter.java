@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,13 +24,14 @@ import java.util.concurrent.RejectedExecutionException;
 
 import es.iesagora.fd_pdplayer.R;
 import es.iesagora.fd_pdplayer.databinding.ViewholderCancionBinding;
-import es.iesagora.fd_pdplayer.funcionamiento.ImagenCancionUtils;
+import es.iesagora.fd_pdplayer.funcionamiento.controlCanciones.ImagenCancionUtils;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.CancionViewHolder> {
 
     public interface Listener {
         void onOpcionesCancion(View anchor, Cancion cancion);
+
         void onClickCancion(Cancion cancion);
     }
 
@@ -41,6 +43,9 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
     private final ExecutorService executorCaratulas = Executors.newFixedThreadPool(2);
     private final LruCache<String, Bitmap> cacheCaratulas;
     private final Set<String> rutasCargando = ConcurrentHashMap.newKeySet();
+
+    private boolean modoOcultacion = false;
+    private final Set<String> rutasSeleccionadas = new HashSet<>();
 
     private boolean liberado = false;
 
@@ -69,6 +74,7 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
         holder.binding.tvNombre.setText(safe(cancion.getNombre()));
         holder.binding.tvSub.setText(crearSubtitulo(cancion));
 
+        actualizarModoOcultacion(holder, cancion);
         cargarCaratula(holder, cancion);
 
         holder.itemView.setOnClickListener(v -> {
@@ -82,6 +88,32 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
                 listener.onOpcionesCancion(v, cancion);
             }
         });
+    }
+
+    private void actualizarModoOcultacion(@NonNull CancionViewHolder holder, Cancion cancion) {
+        String ruta = cancion != null ? safe(cancion.getRutaArchivo()) : "";
+        boolean seleccionada = rutasSeleccionadas.contains(ruta);
+
+        if (modoOcultacion) {
+            holder.binding.btnOpciones.setImageResource(
+                    com.google.android.material.R.drawable.design_ic_visibility_off
+            );
+            holder.binding.btnOpciones.setContentDescription("Seleccionar canción para ocultar");
+
+            if (seleccionada) {
+                holder.binding.card.setCardBackgroundColor(0xFF4A2D35);
+                holder.binding.card.setStrokeColor(0xFFFFB4AB);
+            } else {
+                holder.binding.card.setCardBackgroundColor(0xFF2D3344);
+                holder.binding.card.setStrokeColor(0xFF3A4154);
+            }
+        } else {
+            holder.binding.btnOpciones.setImageResource(R.drawable.ic_arrow_circle_down);
+            holder.binding.btnOpciones.setContentDescription("Opciones canción");
+
+            holder.binding.card.setCardBackgroundColor(0xFF2D3344);
+            holder.binding.card.setStrokeColor(0xFF3A4154);
+        }
     }
 
     private String crearSubtitulo(Cancion cancion) {
@@ -174,6 +206,30 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
         notifyDataSetChanged();
     }
 
+    public void setModoOcultacion(boolean modoOcultacion) {
+        if (liberado) return;
+
+        this.modoOcultacion = modoOcultacion;
+
+        if (!modoOcultacion) {
+            rutasSeleccionadas.clear();
+        }
+
+        notifyDataSetChanged();
+    }
+
+    public void setCancionesSeleccionadas(Set<String> rutasSeleccionadas) {
+        if (liberado) return;
+
+        this.rutasSeleccionadas.clear();
+
+        if (rutasSeleccionadas != null) {
+            this.rutasSeleccionadas.addAll(rutasSeleccionadas);
+        }
+
+        notifyDataSetChanged();
+    }
+
     public void liberar() {
         liberado = true;
 
@@ -182,6 +238,7 @@ public class CancionesAdapter extends RecyclerView.Adapter<CancionesAdapter.Canc
 
         cacheCaratulas.evictAll();
         rutasCargando.clear();
+        rutasSeleccionadas.clear();
         canciones = new ArrayList<>();
     }
 

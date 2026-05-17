@@ -64,7 +64,7 @@ public class CancionesOcultasRepository {
     }
 
     public List<String> obtenerRutasOcultasSync() {
-        Future<List<String>> future = executor.submit((Callable<List<String>>) dao::obtenerRutasOcultasSync);
+        Future<List<String>> future = executor.submit(dao::obtenerRutasOcultasSync);
 
         try {
             List<String> rutas = future.get();

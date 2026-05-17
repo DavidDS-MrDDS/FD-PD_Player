@@ -9,13 +9,16 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Build;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
 import android.util.LruCache;
-import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.media.app.NotificationCompat.MediaStyle;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -23,7 +26,7 @@ import java.util.concurrent.Executors;
 
 import es.iesagora.fd_pdplayer.MainActivity;
 import es.iesagora.fd_pdplayer.R;
-import es.iesagora.fd_pdplayer.funcionamiento.ImagenCancionUtils;
+import es.iesagora.fd_pdplayer.funcionamiento.controlCanciones.ImagenCancionUtils;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 
 public class ReproductorNotificacion implements ReproductorApp.Listener {
@@ -38,6 +41,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
 
     private final Context context;
     private final NotificationManagerCompat notificationManager;
+    private final MediaSessionCompat mediaSession;
 
     private final ExecutorService imagenExecutor = Executors.newSingleThreadExecutor();
     private final LruCache<String, Bitmap> imagenCache;
@@ -53,7 +57,42 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         this.context = context.getApplicationContext();
         this.notificationManager = NotificationManagerCompat.from(this.context);
         this.imagenCache = ImagenCancionUtils.crearCacheImagenes(24);
+        this.mediaSession = new MediaSessionCompat(this.context, "FD_PDPlayer");
 
+        this.mediaSession.setCallback(new MediaSessionCompat.Callback() {
+            @Override
+            public void onPlay() {
+                ReproductorApp.getInstance().toggle();
+            }
+
+            @Override
+            public void onPause() {
+                ReproductorApp.getInstance().toggle();
+            }
+
+            @Override
+            public void onSkipToPrevious() {
+                ReproductorApp.getInstance().irAnterior();
+            }
+
+            @Override
+            public void onSkipToNext() {
+                ReproductorApp.getInstance().irSiguiente();
+            }
+
+            @Override
+            public void onStop() {
+                ReproductorApp.getInstance().liberar();
+                cancelarNotificacion(ReproductorNotificacion.this.context);
+            }
+
+            @Override
+            public void onSeekTo(long posicionMs) {
+                ReproductorApp.getInstance().seekTo((int) posicionMs);
+            }
+        });
+
+        this.mediaSession.setActive(true);
         crearCanal();
     }
 
@@ -95,6 +134,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
             ultimaRuta = "";
             rutaImagenCargando = "";
             versionCargaImagen++;
+            actualizarPlaybackState(false, 0);
             return;
         }
 
@@ -103,9 +143,9 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         String rutaActual = safe(cancionActual.getRutaArchivo());
         boolean cambioCancion = !rutaActual.equals(ultimaRuta);
         boolean cambioEstado = reproduciendo != ultimoEstadoReproduciendo;
-        boolean actualizarProgreso = ahora - ultimaActualizacionProgreso >= 1000;
+        boolean tiempoActualizar = ahora - ultimaActualizacionProgreso >= 1000;
 
-        if (!cambioCancion && !cambioEstado && !actualizarProgreso) {
+        if (!cambioCancion && !cambioEstado && !tiempoActualizar) {
             return;
         }
 
@@ -113,7 +153,10 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         ultimoEstadoReproduciendo = reproduciendo;
         ultimaActualizacionProgreso = ahora;
 
-        mostrarActualizar(
+        actualizarMetadata(cancionActual, preparada, progresoMs, duracionMs);
+        actualizarPlaybackState(reproduciendo, progresoMs);
+
+        mostrarNotificacion(
                 cancionActual,
                 preparada,
                 reproduciendo,
@@ -122,18 +165,86 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         );
     }
 
-    private void mostrarActualizar(
+    private void actualizarMetadata(Cancion cancion,
+                                    boolean preparada,
+                                    int progresoMs,
+                                    int duracionMs) {
+        if (cancion == null) return;
+
+        String textoSecundario = crearTextoSecundario(
+                cancion,
+                preparada,
+                progresoMs,
+                duracionMs
+        );
+
+        mediaSession.setMetadata(new MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, safe(cancion.getNombre()))
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, textoSecundario)
+                .putLong(
+                        MediaMetadataCompat.METADATA_KEY_DURATION,
+                        duracionMs > 0 ? duracionMs : -1
+                )
+                .build());
+    }
+
+    private void actualizarPlaybackState(boolean reproduciendo, int progresoMs) {
+        long acciones = PlaybackStateCompat.ACTION_PLAY
+                | PlaybackStateCompat.ACTION_PAUSE
+                | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                | PlaybackStateCompat.ACTION_STOP
+                | PlaybackStateCompat.ACTION_SEEK_TO;
+
+        float velocidad = reproduciendo ? 1.0f : 0.0f;
+
+        mediaSession.setPlaybackState(new PlaybackStateCompat.Builder()
+                .setActions(acciones)
+                .setState(
+                        reproduciendo
+                                ? PlaybackStateCompat.STATE_PLAYING
+                                : PlaybackStateCompat.STATE_PAUSED,
+                        Math.max(0, progresoMs),
+                        velocidad
+                )
+                .build());
+    }
+
+    private void mostrarNotificacion(
             Cancion cancion,
             boolean preparada,
             boolean reproduciendo,
             int progresoMs,
             int duracionMs
     ) {
-        if (!tienePermisoNotificaciones()) {
-            return;
-        }
+        if (!tienePermisoNotificaciones()) return;
 
-        RemoteViews views = crearRemoteViews(
+        NotificationCompat.Action accionAnterior = new NotificationCompat.Action(
+                android.R.drawable.ic_media_previous,
+                "Anterior",
+                crearBroadcast(ACTION_ANTERIOR, 201)
+        );
+
+        NotificationCompat.Action accionPlayPause = new NotificationCompat.Action(
+                reproduciendo ? R.drawable.ic_player_pause : R.drawable.ic_player_play,
+                reproduciendo ? "Pausar" : "Reproducir",
+                crearBroadcast(ACTION_PLAY_PAUSE, 202)
+        );
+
+        NotificationCompat.Action accionSiguiente = new NotificationCompat.Action(
+                android.R.drawable.ic_media_next,
+                "Siguiente",
+                crearBroadcast(ACTION_SIGUIENTE, 203)
+        );
+
+        NotificationCompat.Action accionCerrar = new NotificationCompat.Action(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                "Cerrar reproductor",
+                crearBroadcast(ACTION_DETENER, 204)
+        );
+
+        Bitmap caratula = obtenerImagenCacheada(
                 cancion,
                 preparada,
                 reproduciendo,
@@ -141,13 +252,28 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
                 duracionMs
         );
 
+        String textoSecundario = crearTextoSecundario(
+                cancion,
+                preparada,
+                progresoMs,
+                duracionMs
+        );
+
+        MediaStyle estilo = new MediaStyle()
+                .setMediaSession(mediaSession.getSessionToken())
+                .setShowActionsInCompactView(0, 1, 2, 3);
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(safe(cancion.getNombre()))
-                .setContentText(safe(cancion.getArtista()))
-                .setCustomContentView(views)
-                .setCustomBigContentView(views)
-                .setContentIntent(crearPendingIntentAbrirApp())
+                .setContentText(textoSecundario)
+                .setLargeIcon(caratula)
+                .addAction(accionAnterior)
+                .addAction(accionPlayPause)
+                .addAction(accionSiguiente)
+                .addAction(accionCerrar)
+                .setStyle(estilo)
+                .setContentIntent(abrirApp())
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
                 .setSilent(true)
@@ -161,91 +287,6 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         }
     }
 
-    private RemoteViews crearRemoteViews(
-            Cancion cancion,
-            boolean preparada,
-            boolean reproduciendo,
-            int progresoMs,
-            int duracionMs
-    ) {
-        RemoteViews views = new RemoteViews(
-                context.getPackageName(),
-                R.layout.notification_reproductor
-        );
-
-        views.setTextViewText(R.id.tvNotifNombre, safe(cancion.getNombre()));
-
-        String artista = safe(cancion.getArtista());
-        if (TextUtils.isEmpty(artista)) {
-            artista = "Artista desconocido";
-        }
-
-        views.setTextViewText(R.id.tvNotifArtista, artista);
-
-        Bitmap imagen = obtenerImagenCacheada(
-                cancion,
-                preparada,
-                reproduciendo,
-                progresoMs,
-                duracionMs
-        );
-
-        if (imagen != null) {
-            views.setImageViewBitmap(R.id.ivNotifImagen, imagen);
-        } else {
-            views.setImageViewResource(R.id.ivNotifImagen, R.drawable.imagenotfound);
-        }
-
-        views.setImageViewResource(R.id.btnNotifAnterior, android.R.drawable.ic_media_previous);
-
-        views.setImageViewResource(
-                R.id.btnNotifPlayPause,
-                reproduciendo ? R.drawable.ic_player_pause : R.drawable.ic_player_play
-        );
-
-        views.setImageViewResource(R.id.btnNotifSiguiente, android.R.drawable.ic_media_next);
-        views.setImageViewResource(R.id.btnNotifCerrar, android.R.drawable.ic_menu_close_clear_cancel);
-
-        views.setOnClickPendingIntent(
-                R.id.btnNotifAnterior,
-                crearPendingIntentAccion(ACTION_ANTERIOR, 201)
-        );
-
-        views.setOnClickPendingIntent(
-                R.id.btnNotifPlayPause,
-                crearPendingIntentAccion(ACTION_PLAY_PAUSE, 202)
-        );
-
-        views.setOnClickPendingIntent(
-                R.id.btnNotifSiguiente,
-                crearPendingIntentAccion(ACTION_SIGUIENTE, 203)
-        );
-
-        views.setOnClickPendingIntent(
-                R.id.btnNotifCerrar,
-                crearPendingIntentAccion(ACTION_DETENER, 204)
-        );
-
-        int duracionSegura = duracionMs > 0 ? duracionMs : 1;
-        int progresoSeguro = Math.max(0, Math.min(progresoMs, duracionSegura));
-
-        views.setTextViewText(R.id.tvNotifTiempoActual, formatearTiempo(progresoSeguro));
-
-        views.setTextViewText(
-                R.id.tvNotifTiempoFinal,
-                preparada && duracionMs > 0 ? formatearTiempo(duracionMs) : "--:--"
-        );
-
-        views.setProgressBar(
-                R.id.progressNotifCancion,
-                duracionSegura,
-                progresoSeguro,
-                false
-        );
-
-        return views;
-    }
-
     private Bitmap obtenerImagenCacheada(
             Cancion cancion,
             boolean preparada,
@@ -253,9 +294,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
             int progresoMs,
             int duracionMs
     ) {
-        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
-            return null;
-        }
+        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) return null;
 
         String ruta = safe(cancion.getRutaArchivo());
 
@@ -265,7 +304,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
             return cacheada;
         }
 
-        cargarImagenNotificacionAsync(
+        cargarImagenAsync(
                 cancion,
                 preparada,
                 reproduciendo,
@@ -276,16 +315,14 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         return null;
     }
 
-    private void cargarImagenNotificacionAsync(
+    private void cargarImagenAsync(
             Cancion cancion,
             boolean preparada,
             boolean reproduciendo,
             int progresoMs,
             int duracionMs
     ) {
-        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) {
-            return;
-        }
+        if (cancion == null || TextUtils.isEmpty(cancion.getRutaArchivo())) return;
 
         String ruta = safe(cancion.getRutaArchivo());
 
@@ -319,7 +356,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
                 return;
             }
 
-            mostrarActualizar(
+            mostrarNotificacion(
                     cancion,
                     preparada,
                     reproduciendo,
@@ -329,7 +366,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         });
     }
 
-    private PendingIntent crearPendingIntentAccion(String action, int requestCode) {
+    private PendingIntent crearBroadcast(String action, int requestCode) {
         Intent intent = new Intent(context, ReproductorNotificacionReceiver.class);
         intent.setAction(action);
 
@@ -347,7 +384,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         );
     }
 
-    private PendingIntent crearPendingIntentAbrirApp() {
+    private PendingIntent abrirApp() {
         Intent intent = new Intent(context, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
@@ -378,8 +415,38 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
 
     public void liberar() {
         cancelar();
+        mediaSession.setActive(false);
+        mediaSession.release();
         imagenExecutor.shutdownNow();
         imagenCache.evictAll();
+    }
+
+    private String crearTextoSecundario(Cancion cancion,
+                                        boolean preparada,
+                                        int progresoMs,
+                                        int duracionMs) {
+        String artista = safe(cancion != null ? cancion.getArtista() : "");
+
+        if (TextUtils.isEmpty(artista)) {
+            artista = "Artista desconocido";
+        }
+
+        if (!preparada || duracionMs <= 0) {
+            return artista;
+        }
+
+        int duracionSegura = Math.max(1, duracionMs);
+        int progresoSeguro = Math.max(0, Math.min(progresoMs, duracionSegura));
+
+        return artista + " • "
+                + formatearTiempo(progresoSeguro)
+                + " / "
+                + formatearTiempo(duracionSegura);
+    }
+
+    private String formatearTiempo(int ms) {
+        int segundos = Math.max(0, ms / 1000);
+        return (segundos / 60) + ":" + String.format("%02d", segundos % 60);
     }
 
     private boolean tienePermisoNotificaciones() {
@@ -391,11 +458,6 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private String formatearTiempo(int ms) {
-        int segundos = Math.max(0, ms / 1000);
-        return (segundos / 60) + ":" + String.format("%02d", segundos % 60);
     }
 
     private String safe(String value) {

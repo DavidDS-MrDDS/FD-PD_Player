@@ -10,7 +10,7 @@
     android:paddingTop="22dp"
     android:paddingEnd="28dp"
     android:paddingBottom="22dp"
-    tools:context=".fragments.internalFragments.itemFragments.CancionEnListaFragment">
+    tools:context=".parteVisual.fragments.internalFragments.itemFragments.CancionEnListaFragment">
 
     <LinearLayout
         android:layout_width="match_parent"

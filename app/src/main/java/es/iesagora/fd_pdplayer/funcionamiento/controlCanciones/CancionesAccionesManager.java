@@ -14,7 +14,7 @@ import es.iesagora.fd_pdplayer.almacenamientoInterno.cancionesOcultasRoom.Cancio
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListaEntity;
 import es.iesagora.fd_pdplayer.almacenamientoInterno.listasRoom.ListasViewModel;
 import es.iesagora.fd_pdplayer.almacenamientoRemoto.accesoApi.Favorites.FavoriteUploadRepository;
-import es.iesagora.fd_pdplayer.funcionamiento.VentanasApp;
+import es.iesagora.fd_pdplayer.funcionamiento.otros.VentanasApp;
 import es.iesagora.fd_pdplayer.funcionamiento.models.Cancion;
 import es.iesagora.fd_pdplayer.funcionamiento.reproductorSegundoPlano.ReproductorApp;
 
