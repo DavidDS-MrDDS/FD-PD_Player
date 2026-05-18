@@ -4,6 +4,11 @@ FD-PD Player es una aplicación Android de reproducción de música local.
 La app permite escuchar canciones almacenadas en el dispositivo, organizarlas en listas, marcar favoritos, ocultar canciones y compartir favoritos mediante una API propia.
 
 Como se puede apreciar, en la carpeta principal hemos dejado el APK de la última versión de la aplicación.
+## Método de instalación:
+- Descargar archivo FD-PD_Player_Release.apk
+- Ir a tu aplicación de gestión de almacenamiento y archivos en tu dispositivo.
+- Seleccionar archivo "FD-PD_Player_Release.apk" e instalar
+- Ejecutar FD-PD Player y aceptar los permisos que solicite al iniciarse.
 
 ## Características principales
 
