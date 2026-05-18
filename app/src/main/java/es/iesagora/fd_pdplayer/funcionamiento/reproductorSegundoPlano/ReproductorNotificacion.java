@@ -153,7 +153,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         ultimoEstadoReproduciendo = reproduciendo;
         ultimaActualizacionProgreso = ahora;
 
-        actualizarMetadata(cancionActual, preparada, progresoMs, duracionMs);
+        actualizarMetadata(cancionActual, duracionMs);
         actualizarPlaybackState(reproduciendo, progresoMs);
 
         mostrarNotificacion(
@@ -165,22 +165,24 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         );
     }
 
-    private void actualizarMetadata(Cancion cancion,
-                                    boolean preparada,
-                                    int progresoMs,
-                                    int duracionMs) {
+    private void actualizarMetadata(Cancion cancion, int duracionMs) {
         if (cancion == null) return;
 
-        String textoSecundario = crearTextoSecundario(
-                cancion,
-                preparada,
-                progresoMs,
-                duracionMs
-        );
+        String artista = safe(cancion.getArtista());
+        String album = safe(cancion.getAlbum());
+
+        if (TextUtils.isEmpty(artista)) {
+            artista = "Artista desconocido";
+        }
+
+        if (TextUtils.isEmpty(album)) {
+            album = "Álbum desconocido";
+        }
 
         mediaSession.setMetadata(new MediaMetadataCompat.Builder()
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, safe(cancion.getNombre()))
-                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, textoSecundario)
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artista)
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
                 .putLong(
                         MediaMetadataCompat.METADATA_KEY_DURATION,
                         duracionMs > 0 ? duracionMs : -1
@@ -252,12 +254,7 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
                 duracionMs
         );
 
-        String textoSecundario = crearTextoSecundario(
-                cancion,
-                preparada,
-                progresoMs,
-                duracionMs
-        );
+        String textoSecundario = crearTextoSecundario(cancion);
 
         MediaStyle estilo = new MediaStyle()
                 .setMediaSession(mediaSession.getSessionToken())
@@ -421,32 +418,23 @@ public class ReproductorNotificacion implements ReproductorApp.Listener {
         imagenCache.evictAll();
     }
 
-    private String crearTextoSecundario(Cancion cancion,
-                                        boolean preparada,
-                                        int progresoMs,
-                                        int duracionMs) {
+    private String crearTextoSecundario(Cancion cancion) {
+        String album = safe(cancion != null ? cancion.getAlbum() : "");
         String artista = safe(cancion != null ? cancion.getArtista() : "");
 
-        if (TextUtils.isEmpty(artista)) {
-            artista = "Artista desconocido";
+        if (!TextUtils.isEmpty(album) && !TextUtils.isEmpty(artista)) {
+            return album + " • " + artista;
         }
 
-        if (!preparada || duracionMs <= 0) {
+        if (!TextUtils.isEmpty(album)) {
+            return album;
+        }
+
+        if (!TextUtils.isEmpty(artista)) {
             return artista;
         }
 
-        int duracionSegura = Math.max(1, duracionMs);
-        int progresoSeguro = Math.max(0, Math.min(progresoMs, duracionSegura));
-
-        return artista + " • "
-                + formatearTiempo(progresoSeguro)
-                + " / "
-                + formatearTiempo(duracionSegura);
-    }
-
-    private String formatearTiempo(int ms) {
-        int segundos = Math.max(0, ms / 1000);
-        return (segundos / 60) + ":" + String.format("%02d", segundos % 60);
+        return "Álbum desconocido";
     }
 
     private boolean tienePermisoNotificaciones() {
